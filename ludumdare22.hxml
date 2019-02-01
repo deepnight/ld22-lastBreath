@@ -1,0 +1,7 @@
+-cp src
+-swf swf/ludumdare22.swf
+-swf-header 1024:768:30:FFFFFF
+-swf-lib obj\ludumdare22Resources.swf
+--flash-strict
+-swf-version 10.1
+-main Main
