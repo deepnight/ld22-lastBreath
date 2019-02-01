@@ -18,6 +18,7 @@ class Boot extends hxd.App {
 
 		hxd.Res.initEmbed({ compressSounds:true });
 		Assets.init();
+		new mt.deepnight.GameFocusHelper(s2d, Assets.font);
 		// new Game();
 		onResize();
 	}
@@ -31,9 +32,9 @@ class Boot extends hxd.App {
 		super.update(dt);
 
 		#if debug
-		var mul = hxd.Key.isDown(hxd.Key.NUMPAD_SUB) ? 0.2 : 1.0;
+			var mul = hxd.Key.isDown(hxd.Key.NUMPAD_SUB) ? 0.2 : 1.0;
 		#else
-		var mul = 1.0;
+			var mul = 1.0;
 		#end
 		mt.Process.updateAll(hxd.Timer.tmod * mul);
 	}
