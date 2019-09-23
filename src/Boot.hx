@@ -18,25 +18,25 @@ class Boot extends hxd.App {
 
 		hxd.Res.initEmbed({ compressSounds:true });
 		Assets.init();
-		new mt.deepnight.GameFocusHelper(s2d, Assets.font);
+		new dn.heaps.GameFocusHelper(s2d, Assets.font);
 		// new Game();
 		onResize();
 	}
 
 	override function onResize() {
 		super.onResize();
-		mt.Process.resizeAll();
+		dn.Process.resizeAll();
 	}
 
 	override function update(dt:Float) {
 		super.update(dt);
 
 		#if debug
-			var mul = hxd.Key.isDown(hxd.Key.NUMPAD_SUB) ? 0.2 : 1.0;
+		var mul = hxd.Key.isDown(hxd.Key.NUMPAD_SUB) ? 0.2 : 1.0;
 		#else
-			var mul = 1.0;
+		var mul = 1.0;
 		#end
-		mt.Process.updateAll(hxd.Timer.tmod * mul);
+		dn.Process.updateAll(hxd.Timer.tmod * mul);
 	}
 }
 

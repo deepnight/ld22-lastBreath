@@ -1,7 +1,7 @@
-import mt.heaps.slib.*;
+import dn.heaps.slib.*;
 
 class Assets {
-	public static var SBANK	= mt.deepnight.Sfx.importDirectory("sfx");
+	public static var SBANK	= dn.heaps.Sfx.importDirectory("sfx");
 	public static var font : h2d.Font;
 	public static var tiles : SpriteLib;
 
@@ -12,7 +12,7 @@ class Assets {
 		font = hxd.Res.alterebroOutline.toFont();
 
 		var t = hxd.Res.tiles.toTile();
-		tiles = new mt.heaps.slib.SpriteLib([t]);
+		tiles = new SpriteLib([t]);
 
 
 		tiles.slice("lightRay",0, 0,192, 16*2, 16*7, 2);
@@ -56,46 +56,46 @@ class Assets {
 		// tiles.setAnim("onWall", [43,44,45,44], [1]);
 		// tiles.setAnim("grab", [46,47, 46,47, 46,47, 48, 46,47, 46,47], [5,5, 5,5, 5,5, 20, 5,5, 5,5]);
 
-		tiles.slice(0,16*8, 16,16, 7);
-		tiles.setAnim("lie", [20,21,22], [5]);
-		#if debug
-		tiles.setAnim("wakeUp", [62],[180]);
-		#else
-		tiles.setAnim("wakeUp", [66,64,65, 64,65, 64,65, 66,62,63,62,67, 66,20,2], [1,60,20, 1,3, 1,6, 7,20,50,30,100, 10,3,3]);
-		#end
-		tiles.setAnim("lookUp", [2,68], [3,999999]);
-		tiles.setAnim("lookBack", [2,3,2], [10,50,2]);
+		// tiles.slice(0,16*8, 16,16, 7);
+		// tiles.setAnim("lie", [20,21,22], [5]);
+		// #if debug
+		// tiles.setAnim("wakeUp", [62],[180]);
+		// #else
+		// tiles.setAnim("wakeUp", [66,64,65, 64,65, 64,65, 66,62,63,62,67, 66,20,2], [1,60,20, 1,3, 1,6, 7,20,50,30,100, 10,3,3]);
+		// #end
+		// tiles.setAnim("lookUp", [2,68], [3,999999]);
+		// tiles.setAnim("lookBack", [2,3,2], [10,50,2]);
 
-		tiles.setGroup("smoke");
-		tiles.slice(0,16*10, 16,16, 6);
-		tiles.setAnim("smoke", [0,1,2,3,4,5], [1]);
-		tiles.setGroup("think");
-		tiles.slice(16*6,16*9, 32,32, 2);
-		tiles.setGroup("shardCounter");
-		tiles.slice(16*10,16*9, 16,16, 2);
+		// tiles.setGroup("smoke");
+		// tiles.slice(0,16*10, 16,16, 6);
+		// tiles.setAnim("smoke", [0,1,2,3,4,5], [1]);
+		// tiles.setGroup("think");
+		// tiles.slice(16*6,16*9, 32,32, 2);
+		// tiles.setGroup("shardCounter");
+		// tiles.slice(16*10,16*9, 16,16, 2);
 
-		tiles.setGroup("leo");
-		tiles.slice(0,16*9, 16,16, 1);
-		tiles.setGroup("shard");
-		tiles.slice(16*1,16*9, 16,16, 5);
-		tiles.setAnim("shardAnim", [1,2,3,4, 3,2,1,0], [2,2,1,3, 2,1,2,3]);
+		// tiles.setGroup("leo");
+		// tiles.slice(0,16*9, 16,16, 1);
+		// tiles.setGroup("shard");
+		// tiles.slice(16*1,16*9, 16,16, 5);
+		// tiles.setAnim("shardAnim", [1,2,3,4, 3,2,1,0], [2,2,1,3, 2,1,2,3]);
 
-		tiles.setGroup("endSky");
-		tiles.slice(336,0, 16*10, 16*4);
-		tiles.setGroup("endGround");
-		tiles.slice(336,64, 16*10, 16*1);
-		tiles.setGroup("endStreet");
-		tiles.slice(352,80, 16*5, 16*3);
-		tiles.setGroup("endPhoto");
-		tiles.slice(432,80, 16*3, 16*3);
-		tiles.setGroup("endBall");
-		tiles.slice(192,464, 16*3, 16*3, 3);
+		// tiles.setGroup("endSky");
+		// tiles.slice(336,0, 16*10, 16*4);
+		// tiles.setGroup("endGround");
+		// tiles.slice(336,64, 16*10, 16*1);
+		// tiles.setGroup("endStreet");
+		// tiles.slice(352,80, 16*5, 16*3);
+		// tiles.setGroup("endPhoto");
+		// tiles.slice(432,80, 16*3, 16*3);
+		// tiles.setGroup("endBall");
+		// tiles.slice(192,464, 16*3, 16*3, 3);
 
-		tiles.setGroup("worldMap");
-		tiles.slice(0,336, 16*10, 16*2);
+		// tiles.setGroup("worldMap");
+		// tiles.slice(0,336, 16*10, 16*2);
 	}
 
-	public static inline function one(arr:Array<?Float->mt.deepnight.Sfx>, ?vol=1.0) : mt.deepnight.Sfx {
-		return arr[Std.random(arr.length)](vol);
+	public static inline function one(arr:Array<?Float->dn.heaps.Sfx>, ?vol=1.0) : dn.heaps.Sfx {
+		return arr[ Std.random(arr.length) ](vol);
 	}
 }
