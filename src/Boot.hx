@@ -21,8 +21,14 @@ class Boot extends hxd.App {
 		hxd.Res.initEmbed();
 		Assets.init();
 		new dn.heaps.GameFocusHelper(s2d, Assets.font);
-		// new Game();
+		new Game();
 		dn.Process.resizeAll();
+
+		// HACK atlas test
+		#if debug
+		var e = Assets.tiles.h_getAndPlay("endPhoto", s2d);
+		e.setScale( dn.heaps.Scaler.bestFit_i(e.tile.width, e.tile.height) );
+		#end
 	}
 
 	override function onResize() {

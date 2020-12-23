@@ -108,11 +108,11 @@ class Game {//}
 	public static var TW : Tweenie= null;
 
 	var root			: MovieClip;
-	var buffer			: Buffer;
+	var buffer			: h2d.Layers;
 	var tiles			: SpriteLib;
 	public var room		: Room;
 	var worldMap		: BitmapData;
-	var rseed			: mt.Rand;
+	var rseed			: dn.Rand;
 	var fl_lock			: Bool;
 	var fl_lockAll		: Bool;
 	var fl_ghost		: Bool;
@@ -121,7 +121,7 @@ class Game {//}
 	var breath			: Int;
 	var respawn			: {x:Int, y:Int};
 	var shield			: Int;
-	var keyLocks		: Hash<Bool>;
+	var keyLocks		: Map<String,Bool>;
 	var easy			: Bool;
 
 	public var player	: Entity;
@@ -158,7 +158,7 @@ class Game {//}
 
 	var shards			: Array<String>;
 	var maxShards		: Int;
-	var flags			: Hash<Bool>;
+	var flags			: Map<String,Bool>;
 	var lastKey			: UInt;
 	var history			: Array<GhostData>;
 	var historyBase		: Array<GhostData>;
@@ -350,9 +350,7 @@ class Game {//}
 		darkness.alpha = 1;
 		#end
 		player.onLand = function() {
-			//playSound(new Explode());
 			TW.create(root, "y", root.y+10, TLoopEaseOut, 150);
-			//for( p in Particle.makeDust() ) {
 			for( i in 0...20 ) {
 				var p = new Particle( 16*4+Std.random(16*5)+1, 16*8-1-Std.random(5) );
 				p.drawBox(2,1,0x69a34f, 1);
@@ -446,15 +444,6 @@ class Game {//}
 		s.y = y*CHEI+CHEI*0.5;
 		lights.addChild(s);
 		return s;
-	}
-
-	public function playSound(snd:Sound, ?vol=1.0) {
-		var k = Type.getClassName(Type.getClass(snd));
-		if ( !SFX_LIB.exists(k) )
-			SFX_LIB.set( k, snd );
-
-		var chan = SFX_LIB.get(k).play();
-		chan.soundTransform = new flash.media.SoundTransform(vol*MAIN_VOLUME);
 	}
 
 	function getRoomName() {
@@ -801,7 +790,6 @@ class Game {//}
 		fl_lockAll = true;
 		popMc = new Sprite();
 		interf.addChild(popMc);
-		//playSound(new Msg());
 
 		var clean = if(msg.charAt(0)=="*" || msg.charAt(0)=="§") msg.substr(1) else msg;
 
@@ -910,7 +898,7 @@ class Game {//}
 		fl_gameOver = true;
 		setGhostVolume(0);
 
-		playSound(new Hit());
+		Assets.SBANK.hit(1);
 
 		for( p in Particle.makeExplosion(50, player.sprite.x, player.sprite.y, 2,10) ) {
 			p.drawBox(1,1, 0xAE0000, Lib.randFloat(0.5)+0.5);
@@ -956,7 +944,7 @@ class Game {//}
 			p.filters = [ new flash.filters.GlowFilter(0xAE0000,1, 2,2) ];
 			front.addChild(p);
 		}
-		playSound(new Die());
+		Assets.SBANK.die(1);
 		TW.terminate(player.sprite,"alpha");
 		root.y+=5;
 		TW.create(root, "y", root.y-5, TElasticEnd, 500);
@@ -981,7 +969,7 @@ class Game {//}
 				p.filters = [new flash.filters.GlowFilter(0xC11D00,1, 4,4,2)];
 				front.addChild(p);
 			}
-			playSound( new Respawn(), 0.5 );
+			Assets.SBANK.respawn(0.5);
 
 			haxe.Timer.delay(function() {
 				if( fl_gameOver )
@@ -1033,7 +1021,7 @@ class Game {//}
 			case "key" :
 				flags.set("_keyPicked",true);
 				flags.set("_ghostLaunched",true);
-				playSound(new PickUp(), 0.5);
+				Assets.SBANK.pickup(0.5);
 				fl_lock = true;
 				player.sprite.playAnim("standing");
 				haxe.Timer.delay(function() {
@@ -1045,7 +1033,7 @@ class Game {//}
 					fl_ghost = true;
 				//}
 			case "shard" :
-				playSound(new Shard());
+				Assets.SBANK.shard(1);
 				for(p in makeRadial(50, e.cx*CWID+CWID*0.5, e.cy*CHEI+CHEI*0.5, 2, 2)) {
 					p.drawBox(Std.random(10)+1,1,0xBEF8F0);
 					p.life = Std.random(16)+2;
@@ -1097,7 +1085,7 @@ class Game {//}
 					flags.set("_keyDropped",true);
 					TW.create(root, "y", root.y+5, TLoopEaseOut, 200);
 					redrawRoom();
-					playSound(new Trigger());
+					Assets.SBANK.trigger(1);
 					setSpawn();
 				}
 		}
@@ -1280,7 +1268,7 @@ class Game {//}
 		s.setCenter(0.5,0.5);
 		s.x = player.sprite.x-8;
 		s.y = player.sprite.y-12;
-		playSound(new Think(),0.2);
+		Assets.SBANK.think(0.2);
 		front.addChild(s);
 		var a = TW.create(s,"alpha", 0, TEaseIn, 4000);
 		a.onUpdate = function() {
@@ -1370,11 +1358,10 @@ class Game {//}
 					dialog(["Fluffy!","Catch the ball Fluffy! Catch it! Good dog!"]);
 					flags.set("ballBounce1",true);
 					onDialogEnd = function() {
-						haxe.Timer.delay(callback(playSound, new Bump(), 0.1), 400);
-						haxe.Timer.delay(callback(playSound, new Bump(), 0.3), 1300);
-						haxe.Timer.delay(callback(playSound, new Bump(), 0.5), 2200);
-						haxe.Timer.delay(callback(playSound, new Bump(), 0.3), 3100);
-						//haxe.Timer.delay(callback(playSound, new Bump(), 0.1), 3900);
+						haxe.Timer.delay(()->Assets.SBANK.bump(0.1), 400);
+						haxe.Timer.delay(()->Assets.SBANK.bump(0.3), 1300);
+						haxe.Timer.delay(()->Assets.SBANK.bump(0.5), 2200);
+						haxe.Timer.delay(()->Assets.SBANK.bump(0.3), 3100);
 					}
 				}
 				if( flags.get("ballBounce1") ) {
@@ -1436,7 +1423,7 @@ class Game {//}
 								buffer.addChild(white);
 								white.alpha = 0;
 								TW.create(white,"alpha", 1, TEaseIn, 1500).onEnd = function() {
-									playSound(new Explode());
+									Assets.SBANK.explode(1);
 									cine.visible = false;
 									TW.create(white,"alpha", 0, TEaseOut, 500).onEnd = function() {
 										white.parent.removeChild(white);
@@ -1539,8 +1526,8 @@ class Game {//}
 					}
 
 					switch(Std.random(2)) {
-						case 0 : playSound(new Jump2(), 0.3);
-						case 1 : playSound(new Jump3(), 0.3);
+						case 0 : Assets.SBANK.jump2(0.3);
+						case 1 : Assets.SBANK.jump3(0.3);
 					}
 
 					player.jump(-0.4);

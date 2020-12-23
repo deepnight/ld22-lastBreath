@@ -1,5 +1,3 @@
-import mt.deepnight.SpriteLib;
-import mt.deepnight.Lib;
 import Game;
 
 @:publicFields class Entity {
@@ -14,7 +12,7 @@ import Game;
 	var yr			: Float;
 	var dx			: Float;
 	var dy			: Float;
-	var sprite		: Null<DSprite>;
+	var sprite		: Null<HSprite>;
 	var id			: String;
 
 	var onLand		: Null<Void->Void>;
@@ -55,12 +53,12 @@ import Game;
 		dy = 0;
 		xr = if(dir==1) 1 else 0;
 		yr = 0.45;
-		sprite.setCenter(0.4, 1);
-		man.playSound(new Grab(), 0.2);
+		sprite.setCenterRatio(0.4, 1);
+		Assets.SBANK.grab(0.2);
 	}
 
 	function jump(p:Float) {
-		sprite.setCenter(0.5, 1);
+		sprite.setCenterRatio(0.5, 1);
 		dy = -p;
 		fl_stable = false;
 		fl_grabbing	= false;
@@ -104,9 +102,9 @@ import Game;
 			if(onLand!=null) onLand();
 			if( this==man.player )
 				if( man.phase=="intro" )
-					man.playSound(new FallLand(), 0.3);
+					Assets.SBANK.fallLand(0.3);
 				else
-					man.playSound(new Land(), 0.03);
+					Assets.SBANK.land(0.2);
 		}
 		if( dy<0 && yr<0.5 && r.get(cx,cy-1).collide ) {
 			dy = 0;
