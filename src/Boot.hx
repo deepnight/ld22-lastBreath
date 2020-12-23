@@ -16,11 +16,13 @@ class Boot extends hxd.App {
 		//new hxd.net.SceneInspector(s3d);
 		#end
 
+		hxd.Timer.wantedFPS = 30;
+		// hxd.snd.Manager.get(); // TODO
 		hxd.Res.initEmbed();
 		Assets.init();
 		new dn.heaps.GameFocusHelper(s2d, Assets.font);
 		// new Game();
-		onResize();
+		dn.Process.resizeAll();
 	}
 
 	override function onResize() {
@@ -31,12 +33,16 @@ class Boot extends hxd.App {
 	override function update(dt:Float) {
 		super.update(dt);
 
+		var tmod = hxd.Timer.tmod;
+
 		#if debug
-		var mul = hxd.Key.isDown(hxd.Key.NUMPAD_SUB) ? 0.2 : 1.0;
-		#else
-		var mul = 1.0;
+		var mul = K.isDown(K.HOME) ? 0.2 : 1.0;
+		if( K.isDown(K.END) )
+			mul*=5;
+		tmod*=mul;
 		#end
-		dn.Process.updateAll(hxd.Timer.tmod * mul);
+		Assets.tiles.tmod = tmod;
+		dn.Process.updateAll(tmod);
 	}
 }
 
