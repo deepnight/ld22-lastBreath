@@ -38,33 +38,37 @@ class Assets {
 		tiles.slice("iBall",0, 16*12,16*26, 16,16, 2);
 		tiles.slice("iSky",0, 0,16*27, 16*5,16*2, 2);
 
+		tiles.setSliceGrid(16,16);
+		tiles.sliceAnimGrid("standing",0,  3,  0,5, 3);
+		tiles.sliceAnimGrid("walking",0,  3,  0,6, 8);
+		tiles.sliceAnimGrid("jumpUp",0,  1,  0,7, 1);
+		tiles.sliceAnimGrid("lie",0, 5,  0,8, 3);
+
+		tiles.sliceAnimGrid("lookUp",0, 3,  8,8, 2);
+		tiles.defineAnim("lookUp", "0(3), 1(999)");
+
+		tiles.sliceAnimGrid("lookBack",0, 3,  2,5, 2);
+		tiles.defineAnim("lookBack", "0(10), 1(50), 0(2)");
+
+		tiles.sliceGrid("running",0,  0,6, 8);
+		tiles.defineAnim("running", "0(2),2,4(2),6,7(2)");
+
+		tiles.sliceGrid("jumpDown",0,  1,7, 2);
+		tiles.defineAnim("jumpDown", "0(2),1(9999)");
+
+		tiles.sliceAnimGrid("onWall",0, 1,  3,7, 3);
+		tiles.defineAnim("onWall", "0(2),1(2),2(2),1(2)");
+
+		tiles.sliceAnimGrid("grab",0, 1,  6,7, 3);
+		tiles.defineAnim("grab", "0(5), 1(5),   0(5), 1(5),   0(5), 1(5),  2(20),   0(5), 1(5),   0(5), 1(5)");
+
+		tiles.sliceAnimGrid("wakeUp",0, 1,  0,8, 9);
+		tiles.defineAnim("wakeUp", "6, 4(60), 5(20), 4, 5(3), 4, 5(6),  6(7), 2(20), 3(50), 2(30), 7(100), 2(2), 6(10), 8(999)");
+
+		tiles.sliceAnimGrid("smoke",0,  1,  0,10,  6);
+
+		/***
 		tiles.slice("player",0, 0,16*5, 16,16, 20,5);
-		tiles.defineAnim("standing", "0-2(3)");
-		// tiles.setAnim("standing", [0,1,2], [3]);
-
-		tiles.defineAnim("walking", "20-27(1)");
-		tiles.defineAnim("running", "20,22, 24, 26,27");
-		// tiles.setAnim("walking", [20,21,22, 23,24,25, 26,27], [1]);
-		// tiles.setAnim("running", [20,22, 24, 26,27], [1]);
-
-		tiles.defineAnim("jumpUp", "40");
-		tiles.defineAnim("jumpDown", "41(2),42(99999)");
-		tiles.defineAnim("onWall", "43,44,45,44");
-		tiles.defineAnim("grab", "46(5),47(5), 46(5),47(5), 46(5),47(5), 48(20), 46(5),47(5), 46(5),47(5)");
-		// tiles.setAnim("jumpUp", [40], [1]);
-		// tiles.setAnim("jumpDown", [41,42], [2,99999]);
-		// tiles.setAnim("onWall", [43,44,45,44], [1]);
-		// tiles.setAnim("grab", [46,47, 46,47, 46,47, 48, 46,47, 46,47], [5,5, 5,5, 5,5, 20, 5,5, 5,5]);
-
-		tiles.slice(0,16*8, 16,16, 7);
-		tiles.setAnim("lie", [20,21,22], [5]);
-		#if debug
-		tiles.setAnim("wakeUp", [62],[180]);
-		#else
-		tiles.setAnim("wakeUp", [66,64,65, 64,65, 64,65, 66,62,63,62,67, 66,20,2], [1,60,20, 1,3, 1,6, 7,20,50,30,100, 10,3,3]);
-		#end
-		tiles.setAnim("lookUp", [2,68], [3,999999]);
-		tiles.setAnim("lookBack", [2,3,2], [10,50,2]);
 
 		tiles.setGroup("smoke");
 		tiles.slice(0,16*10, 16,16, 6);
@@ -93,6 +97,7 @@ class Assets {
 
 		tiles.setGroup("worldMap");
 		tiles.slice(0,336, 16*10, 16*2);
+		/***/
 	}
 
 	public static inline function one(arr:Array<?Float->dn.heaps.Sfx>, ?vol=1.0) : dn.heaps.Sfx {
