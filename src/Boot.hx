@@ -16,7 +16,7 @@ class Boot extends hxd.App {
 		//new hxd.net.SceneInspector(s3d);
 		#end
 
-		hxd.Res.initEmbed({ compressSounds:true });
+		hxd.Res.initEmbed();
 		Assets.init();
 		new dn.heaps.GameFocusHelper(s2d, Assets.font);
 		// new Game();
