@@ -1,21 +1,5 @@
 ﻿// Wolfram : http://tones.wolfram.com/xid/0442-996-1532-982-3127
 
-import flash.display.Bitmap;
-import flash.display.MovieClip;
-import flash.display.Sprite;
-import flash.media.Sound;
-import flash.ui.Keyboard;
-import flash.display.BitmapData;
-
-import mt.deepnight.Buffer;
-import mt.deepnight.Lib;
-import mt.deepnight.SpriteLib;
-import mt.deepnight.Tweenie;
-import mt.deepnight.Particle;
-
-class GfxTiles extends flash.display.BitmapData {}
-class GameFont extends flash.text.Font {}
-
 typedef GhostData = {
 	x		: Float,
 	y		: Float,
@@ -33,7 +17,7 @@ typedef GhostData = {
 	var collide		: Bool;
 	var cx			: Int;
 	var cy			: Int;
-	var sprite		: Null<DSprite>;
+	var sprite		: Null<HSprite>;
 
 	public function new() {
 		cx = 0;
@@ -86,32 +70,29 @@ typedef GhostData = {
 	}
 }
 
-class Game {//}
+class Game extends dn.Process {
+	static var GAME_WID = 256;
+	static var GAME_HEI = 192;
+	static var SCALE = 1;
 	static var TITLE = "Last breath";
 	static var EXTENDED = true;
-	static var SFX_LIB = new Hash();
 	static var MUSIC_VOLUME = 1;
 	static var MAIN_VOLUME = 1;
 	static var RNAMES = [
 		["The pit","Narrow caves","The Great Hall","Temptation","Dead end"],
 		["","","Crossroads","Trap","Fallen","Depths"]
 	];
-	static var FONT = new GameFont();
 	public static var CWID = 16;
 	public static var CHEI = CWID;
-	public static var WID = Std.int(flash.Lib.current.stage.stageWidth);
-	public static var HEI = Std.int(flash.Lib.current.stage.stageHeight);
 	public static var ME : Game;
 	public static var UPSCALE = 4;
 	public static var USE_SCALE2X = false;
 	public static var USE_TEXTURE = true;
-	public static var TW : Tweenie= null;
 
-	var root			: MovieClip;
-	var buffer			: h2d.Layers;
+	var wrapper			: h2d.Layers;
 	var tiles			: SpriteLib;
 	public var room		: Room;
-	var worldMap		: BitmapData;
+	var worldMap		: hxd.Pixels;
 	var rseed			: dn.Rand;
 	var fl_lock			: Bool;
 	var fl_lockAll		: Bool;
@@ -125,36 +106,35 @@ class Game {//}
 	var easy			: Bool;
 
 	public var player	: Entity;
-	var playerLight		: DSprite;
-	var ghost			: DSprite;
+	var playerLight		: HSprite;
+	var ghost			: HSprite;
 	var ghostSpeed		: Float;
 	var ghostAdvance	: Float;
 	var ghostDist		: Int;
-	var ghostChan		: flash.media.SoundChannel;
-	var shardCounter	: Sprite;
+	var ghostSfx : Sfx;
+	var shardCounter	: h2d.Object;
 
-	var scene			: Sprite;
-	var platforms		: Sprite;
-	var bg				: Sprite;
-	var front			: Sprite;
-	var top				: Sprite;
-	var interf			: Sprite;
-	var popMc			: Null<Sprite>;
+	var scene			: h2d.Object;
+	var platforms		: h2d.Object;
+	var bg				: h2d.Object;
+	var front			: h2d.Object;
+	var top				: h2d.Object;
+	var interf			: h2d.Object;
+	var popMc			: Null<h2d.Object>;
 	var curDialog		: Array<String>;
 	var onDialogEnd		: Null<Void->Void>;
 	var lastTitle		: Null<flash.text.TextField>;
 	var lastTip			: Null<flash.text.TextField>;
 
-	var cineMask		: Sprite;
-	var cine			: Sprite;
+	var cineMask		: h2d.Object;
+	var cine			: h2d.Object;
 	var cineUpdate		: Void->Void;
-	//var idog			: DSprite;
 
-	var roomSprites		: Sprite;
-	var miscSprites		: Sprite;
+	var roomSprites		: h2d.Object;
+	var miscSprites		: h2d.Object;
 
-	var darkness		: Sprite;
-	var lights			: Sprite;
+	var darkness		: h2d.Graphics;
+	var lights			: h2d.Object;
 
 	var shards			: Array<String>;
 	var maxShards		: Int;
@@ -167,22 +147,14 @@ class Game {//}
 	#end
 
 
-	public function new(r) {
+	public function new() {
+		super();
 		ME = this;
-		root = r;
-		//haxe.Firebug.redirectTraces();
-		root.addEventListener( flash.events.Event.ENTER_FRAME, main );
-		flash.Lib.current.stage.addEventListener(flash.events.KeyboardEvent.KEY_DOWN, onKey);
-		flash.Lib.current.stage.addEventListener(flash.events.KeyboardEvent.KEY_UP, function(_) lastKey = -1 );
-		flash.Lib.current.stage.quality = flash.display.StageQuality.MEDIUM;
 
-		Key.init();
-		haxe.Log.setColor(0xFFFF00);
-		TW = new Tweenie();
 		fl_lock = false;
 		breath = 10;
 		maxShards = 0;
-		keyLocks = new Hash();
+		keyLocks = new Map();
 		ghostSpeed = 0;
 		ghostAdvance = 0;
 		ghostDist = 100;
@@ -192,61 +164,49 @@ class Game {//}
 		shield = 0;
 		shards = new Array();
 		fl_lockAll = false;
-		flags = new Hash();
+		flags = new Map();
 		history = new Array();
 		historyBase = new Array();
 		curDialog = new Array();
-		Particle.WINDX = -0.06;
-		Particle.WINDY = 0.02;
+		// Particle.WINDX = -0.06; // TODO
+		// Particle.WINDY = 0.02;
 
-		buffer = new Buffer(256,192, UPSCALE, false, 0x161821, USE_SCALE2X);
-		if( USE_TEXTURE )
-			buffer.setTexture( Buffer.makeMosaic(UPSCALE), 0.25, flash.display.BlendMode.OVERLAY, true );
-		root.addChild(buffer.render);
+		// var gradient = new h2d.Object(); // TODO
+		// root.addChild(gradient);
+		// var g = gradient.graphics;
+		// var m = new flash.geom.Matrix();
+		// m.createGradientBox(buffer.width, buffer.height, Math.PI/2, 0,50);
+		// g.beginGradientFill(flash.display.GradientType.LINEAR, [0x3A4056,0x0A0B0E], [0,1], [0,255], m);
+		// g.drawRect(0,0,buffer.width, buffer.height);
+		// g.endFill();
 
-		var gradient = new Sprite();
-		buffer.addChild(gradient);
-		var g = gradient.graphics;
-		var m = new flash.geom.Matrix();
-		m.createGradientBox(buffer.width, buffer.height, Math.PI/2, 0,50);
-		g.beginGradientFill(flash.display.GradientType.LINEAR, [0x3A4056,0x0A0B0E], [0,1], [0,255], m);
-		g.drawRect(0,0,buffer.width, buffer.height);
-		g.endFill();
+		scene = new h2d.Object(root);
 
-		scene = new Sprite();
-		buffer.addChild(scene);
-
-		bg = new Sprite();
+		bg = new h2d.Object();
 		scene.addChild(bg);
-		platforms = new Sprite();
+		platforms = new h2d.Object();
 		scene.addChild(platforms);
-		front = new Sprite();
+		front = new h2d.Object();
 		scene.addChild(front);
 
-		top = new Sprite();
+		top = new h2d.Object();
 		scene.addChild(top);
 
-		interf = new Sprite();
-		buffer.addChild(interf);
+		interf = new h2d.Object(root);
 
-		darkness = new Sprite();
-		top.addChild(darkness);
-		var g = darkness.graphics;
-		g.beginFill(0x0,1);
-		g.drawRect(0,0, buffer.width, buffer.height);
-		g.endFill();
+		darkness = new h2d.Graphics(top);
+		darkness.beginFill(0x0,1);
+		darkness.drawRect(0,0, 100,100); // TODO proper size
 
-		lights = new Sprite();
+		lights = new h2d.Object();
 		top.addChild(lights);
-		lights.blendMode = flash.display.BlendMode.ERASE;
+		lights.blendMode = Erase;
 
-		top.blendMode = flash.display.BlendMode.LAYER;
+		top.blendMode = Alpha;
 
 		// tiles = new SpriteLib(new GfxTiles(0,0) ) ;
 
-		var map = tiles.getSprite("worldMap");
-		worldMap = new BitmapData(Std.int(map.width), Std.int(map.height), false, 0x0);
-		worldMap.draw(map);
+		worldMap = tiles.getTile("worldMap").getTexture().capturePixels();
 		for( x in 0...worldMap.width )
 			for( y in 0...worldMap.height )
 				if( worldMap.getPixel(x,y)==0x0042ff )
@@ -257,26 +217,22 @@ class Game {//}
 		player.cx = 10;
 		player.cy = 9;
 		player.id = "player";
-		player.sprite = tiles.getSprite("player");
-		player.sprite.setCenter(0.5, 1);
+		player.sprite = tiles.h_get("player");
+		player.sprite.setCenterRatio(0.5, 1);
 		front.addChild(player.sprite);
 
-		playerLight = tiles.getSprite("lightRadius");
+		playerLight = tiles.h_get("lightRadius");
 		playerLight.alpha = 0.8;
-		playerLight.setCenter(0.5,0.6);
+		playerLight.setCenterRatio(0.5,0.6);
 
-		ghost = tiles.getSprite("player");
-		//ghost.blendMode = flash.display.BlendMode.SCREEN;
+		ghost = tiles.h_get("player");
 		var ct = new flash.geom.ColorTransform();
 		ct.color = 0x0;
-		//ghost.transform.colorTransform = ct;
-		ghost.filters = [
-			mt.deepnight.Color.getColorizeMatrixFilter(0x171D24,1,0),
-			new flash.filters.GlowFilter(0x293241,0.5, 2,2,10),
-			new flash.filters.GlowFilter(0x0,1, 16,16,2),
-			//new flash.filters.GlowFilter(0x843535,1, 2,2,10),
-			//new flash.filters.BlurFilter(2,2),
-		];
+		// ghost.filters = [ // TODO
+		// 	mt.deepnight.Color.getColorizeMatrixFilter(0x171D24,1,0),
+		// 	new flash.filters.GlowFilter(0x293241,0.5, 2,2,10),
+		// 	new flash.filters.GlowFilter(0x0,1, 16,16,2),
+		// ];
 		ghost.visible = false;
 		front.addChild(ghost);
 
@@ -289,6 +245,15 @@ class Game {//}
 		player.moveTo(0,0);
 
 		chooseDifficulty();
+	}
+
+	override function onResize() {
+		super.onResize();
+
+		SCALE = Scaler.bestFit_i(GAME_WID, GAME_HEI);
+		darkness.clear();
+		darkness.beginFill(0x0,1);
+		darkness.drawRect(0,0, GAME_WID, GAME_HEI);
 	}
 
 	function chooseDifficulty() {
@@ -322,14 +287,12 @@ class Game {//}
 		updateShardCounter();
 		scene.visible = front.visible = true;
 
-		var s = new Shadow();
-		ghostChan = s.play(0,99999);
-		ghostChan.soundTransform = new flash.media.SoundTransform(0);
+		ghostSfx = Assets.SBANK.shadow();
+		ghostSfx.playOnGroup(1, true, 0);
 
 		haxe.Timer.delay(function() {
-			var m = new Music();
-			var chan = m.play(0,999);
-			chan.soundTransform = new flash.media.SoundTransform(MUSIC_VOLUME);
+			var m = Assets.SBANK.theme();
+			m.play(true, MUSIC_VOLUME);
 		}, 2500);
 
 		fl_lockAll = false;
@@ -344,36 +307,34 @@ class Game {//}
 		displayRoom(0,0, false);
 		player.moveTo(6,-1);
 		#end
-		player.sprite.playAnim("jumpDown", 1);
+		player.sprite.anim.play("jumpDown", 1);
 		fl_lock = true;
 		#if !debug
 		darkness.alpha = 1;
 		#end
 		player.onLand = function() {
-			TW.create(root, "y", root.y+10, TLoopEaseOut, 150);
+			// tw.createMs(root.y, root.y+10, TLoopEaseOut, 150); // TODO cam bump
 			for( i in 0...20 ) {
 				var p = new Particle( 16*4+Std.random(16*5)+1, 16*8-1-Std.random(5) );
 				p.drawBox(2,1,0x69a34f, 1);
 				p.groupId = "leaf";
-				p.dy = -Lib.randFloat(3);
-				p.dx = Lib.randFloat(0.7)*Lib.sign();
+				p.dy = -rnd(0,3);
+				p.dx = rnd(0,0.7)*rndSign();
 				p.gy = 0.02;
 				p.frictY = 0.9;
 				p.life = 200;
 				p.r = Std.random(5)+2;
-				p.alpha = Lib.randFloat(0.5)+0.5;
+				p.alpha = rnd(0,0.5)+0.5;
 				p.fl_wind = false;
 				p.bounds = new flash.geom.Rectangle(16*4,0, 16*5, 16*8);
 				p.filters = [ new flash.filters.GlowFilter(0x466F35,1,2,2,1) ];
 				front.addChild(p);
 			}
-			player.sprite.playAnim("wakeUp",1);
+			player.sprite.anim.play("wakeUp",1);
 			player.onLand = null;
 		}
 		setSpawn();
-		scene.alpha  = 0;
-		scene.blendMode = flash.display.BlendMode.LAYER;
-		TW.create(scene, "alpha", 1, 1000).onEnd = function() scene.blendMode = flash.display.BlendMode.NORMAL;
+		tw.createMs(scene.alpha, 0>1, 1000);
 		main(null);
 	}
 
@@ -383,31 +344,31 @@ class Game {//}
 		var k = e.keyCode;
 		lastKey = k;
 		if( phase=="difficulty" ) {
-			if( k==Keyboard.NUMPAD_1 || k==Keyboard.NUMBER_1 || k==97 || k==35 ) {
+			if( k==K.NUMPAD_1 || k==K.NUMBER_1 || k==97 || k==35 ) {
 				easy = true;
 				closePop(true);
 			}
-			if( k==Keyboard.NUMPAD_2 || k==Keyboard.NUMBER_2 || k==98 || k==40 )
+			if( k==K.NUMPAD_2 || k==K.NUMBER_2 || k==98 || k==40 )
 				closePop(true);
 		}
 		else
-			if( k==Keyboard.SPACE || k==Keyboard.ENTER )
+			if( k==K.SPACE || k==K.ENTER )
 				closePop(true);
-		if( phase=="cinematic" && !fl_gameOver && (k==Keyboard.C || k==Keyboard.S) ) {
+		if( phase=="cinematic" && !fl_gameOver && (k==K.C || k==K.S) ) {
 			curDialog = new Array();
 			closePop();
 			startGame();
 		}
 	}
 
-	function setGhostVolume(v:Float) {
-		ghostChan.soundTransform = new flash.media.SoundTransform(MAIN_VOLUME*0.1*v);
+	inline function setGhostVolume(v:Float) {
+		ghostSfx.volume = MAIN_VOLUME*0.1*v;
 	}
 
-	function _createEntity(?id:String, x,y, s:DSprite) {
+	function _createEntity(?id:String, x,y, s:HSprite) {
 		var i = new Entity(this);
 		i.sprite = s;
-		i.sprite.setCenter(0.5, 1);
+		i.sprite.setCenterRatio(0.5, 1);
 		i.cx = x;
 		i.cy = y;
 		i.yr =1;
@@ -417,18 +378,18 @@ class Game {//}
 		room.entities.push(i);
 		return i;
 	}
-	function createItem(?id:String, x,y, s:DSprite) {
+	function createItem(?id:String, x,y, s:HSprite) {
 		var i = _createEntity(id,x,y,s);
 		i.fl_pick = true;
 		miscSprites.addChild(i.sprite);
 		return i;
 	}
-	function createTrigger(?id:String, x,y, s:DSprite) {
+	function createTrigger(?id:String, x,y, s:HSprite) {
 		var i = _createEntity(id,x,y,s);
 		i.fl_trigger = true;
 		roomSprites.addChild(i.sprite);
-		var s = tiles.getSprite("lightRadius");
-		s.setCenter(0.5,0.5);
+		var s = tiles.h_get("lightRadius");
+		s.setCenterRatio(0.5,0.5);
 		s.scaleX = s.scaleY = 0.7;
 		s.x = i.cx*CWID+CWID*0.5-2;
 		s.y = i.cy*CHEI+CHEI*0.5;
@@ -437,8 +398,8 @@ class Game {//}
 	}
 
 	function createLight(x,y,?sc=1.0) {
-		var s = tiles.getSprite("lightRadius");
-		s.setCenter(0.5,0.5);
+		var s = tiles.h_get("lightRadius");
+		s.setCenterRatio(0.5,0.5);
 		s.scaleX = s.scaleY = sc;
 		s.x = x*CWID+CWID*0.5-2;
 		s.y = y*CHEI+CHEI*0.5;
@@ -485,11 +446,11 @@ class Game {//}
 					}
 			}
 		}
-		//bg = new Sprite();
+		//bg = new h2d.Object();
 		//scene.addChild(bg);
-		miscSprites = new Sprite();
+		miscSprites = new h2d.Object();
 		front.addChild(miscSprites);
-		roomSprites = new Sprite();
+		roomSprites = new h2d.Object();
 		roomSprites.filters = [
 			//new flash.filters.DropShadowFilter(1,-90, 0x8CA4CE,0.2, 0,0,1, 1,true),
 			new flash.filters.DropShadowFilter(1,-90, 0x0,0.6, 2,2,10, 1,true),
@@ -512,25 +473,25 @@ class Game {//}
 				var c = room.get(x,y);
 				var sx = c.cx*CWID;
 				var sy = c.cy*CHEI;
-				var s = tiles.getSpriteRandom("wallBg", rseed.random);
+				var s = tiles.h_getRandom("wallBg", rseed.random);
 				s.x = sx;
 				s.y = sy;
 				bg.addChild(s);
 				switch( worldMap.getPixel(rx*16+x, ry*16+y) ) {
 					case 0xFFFFFF : // ray of light
-						var s = tiles.getSpriteRandom("lightRay", rseed.random);
-						s.setCenter(0.4,0);
+						var s = tiles.h_getRandom("lightRay", rseed.random);
+						s.setCenterRatio(0.4,0);
 						s.x = sx;
 						s.y = sy;
 						s.rotation = -20;
-						//s.alpha = Lib.randFloat(0.3)+0.7;
+						//s.alpha = rnd(0,0.3)+0.7;
 						s.scaleY = rseed.rand()*0.3/1000+1;
 						s.scaleX = rseed.rand()*0.2+1;
 						lights.addChild(s);
 
 					case 0x0042ff : // shard
 						if( !hasShard(room.getId(),x,y) ) {
-							var i = createItem("shard",x,y, tiles.getSprite("shard"));
+							var i = createItem("shard",x,y, tiles.h_get("shard"));
 							i.sprite.playAnim("shardAnim");
 							for(n in 0...Std.random(6))
 								i.sprite.nextAnimFrame();
@@ -538,8 +499,8 @@ class Game {//}
 								new flash.filters.GlowFilter(0xBCFAF3,1, 4,4),
 								new flash.filters.GlowFilter(0x1FE9BB,1, 16,16,1)
 							];
-							var s = tiles.getSprite("lightRadius");
-							s.setCenter(0.5,0.5);
+							var s = tiles.h_get("lightRadius");
+							s.setCenterRatio(0.5,0.5);
 							s.x = sx+6;
 							s.y = sy+6;
 							lights.addChild(s);
@@ -547,42 +508,42 @@ class Game {//}
 
 					case 0xff981e : // special item
 						if( inRoom(0,0) && !flags.get("_keyPicked") ) {
-							createItem("key", x, y+(flags.get("_keyDropped")?2:0), tiles.getSprite("key"));
+							createItem("key", x, y+(flags.get("_keyDropped")?2:0), tiles.h_get("key"));
 							if( phase!="intro" )
 								createLight(x,y);
 						}
 						if( inRoom(2,0) )
-							createTrigger("dropKey", x,y, tiles.getSprite("trigger", flags.get("_keyDropped") ? 1:0 ));
+							createTrigger("dropKey", x,y, tiles.h_get("trigger", flags.get("_keyDropped") ? 1:0 ));
 					case 0xFFFF00 : // pit
-						var s = tiles.getSprite("lightColumn");
-						s.setCenter(0,0);
+						var s = tiles.h_get("lightColumn");
+						s.setCenterRatio(0,0);
 						s.x = sx-16;
 						s.y = sy;
 						lights.addChild(s);
 					case 0x707070 : // doors
 						if( !(inRoom(2,0) && flags.get("_doorOpened") || inRoom(1,0) && (flags.get("_keyDropped") || flags.get("keytPicked"))) ) {
 							c.collide = true;
-							var s = tiles.getSprite("door");
+							var s = tiles.h_get("door");
 							s.x = sx;
 							s.y = sy;
 							roomSprites.addChild(s);
 						}
 					case 0xaaaaaa : // wall or ground
 						c.collide = true;
-						var s = tiles.getSpriteRandom( if( room.get(c.cx,c.cy-1).collide ) "wall" else "ground", rseed.random );
+						var s = tiles.h_getRandom( if( room.get(c.cx,c.cy-1).collide ) "wall" else "ground", rseed.random );
 						s.x = sx;
 						s.y = sy;
 						roomSprites.addChild(s);
 					case 0x00ff00 : // grass
 						c.collide = true;
-						var s = tiles.getSpriteRandom("grass", rseed.random);
+						var s = tiles.h_getRandom("grass", rseed.random);
 						s.x = sx;
 						s.y = sy;
 						roomSprites.addChild(s);
 					case 0x58d7c6 : // Leo's ghost
 						if( flags.exists("comeBackPit") ) {
-							var s = tiles.getSprite("leo");
-							s.setCenter(0.5, 1);
+							var s = tiles.h_get("leo");
+							s.setCenterRatio(0.5, 1);
 							s.x = sx+8;
 							s.y = sy+12;
 							s.blendMode = flash.display.BlendMode.SCREEN;
@@ -590,15 +551,15 @@ class Game {//}
 							s.filters = [ new flash.filters.GlowFilter(0x1FE9BB,1, 16,16,1) ];
 							miscSprites.addChild(s);
 							if( phase!="intro" ) {
-								var s = tiles.getSprite("lightRadius");
-								s.setCenter(0.5,0.5);
+								var s = tiles.h_get("lightRadius");
+								s.setCenterRatio(0.5,0.5);
 								s.x = sx+6;
 								s.y = sy;
 								lights.addChild(s);
 							}
 						}
 					case 0xff0000 :
-						var s = tiles.getSprite("spike", tiles.getRandomFrame("spike", rseed.random));
+						var s = tiles.h_get("spike", tiles.getRandomFrame("spike", rseed.random));
 						s.x = sx;
 						s.y = sy;
 						c.kill = true;
@@ -606,13 +567,13 @@ class Game {//}
 					default :
 				}
 				if( c.collide && !room.get(c.cx,c.cy-1).collide && rseed.random(100)<50 ) {
-					var s = tiles.getSprite("props", tiles.getRandomFrame("props", rseed.random));
+					var s = tiles.h_get("props", tiles.getRandomFrame("props", rseed.random));
 					s.x = c.cx*CWID;
 					s.y = (c.cy-1)*CHEI;
 					roomSprites.addChild(s);
 				}
 				if( c.collide && !room.get(c.cx,c.cy+1).collide && rseed.random(100)<50 ) {
-					var s = tiles.getSprite("ceilProps", tiles.getRandomFrame("ceilProps", rseed.random));
+					var s = tiles.h_get("ceilProps", tiles.getRandomFrame("ceilProps", rseed.random));
 					s.x = c.cx*CWID;
 					s.y = (c.cy+1)*CHEI;
 					roomSprites.addChild(s);
@@ -620,7 +581,7 @@ class Game {//}
 			}
 
 		if( inRoom(0,0) ) {
-			var s = tiles.getSprite("lightSource");
+			var s = tiles.h_get("lightSource");
 			s.filters = [
 				new flash.filters.GlowFilter(0xFFF39D,1, 16,16,2) ,
 				new flash.filters.GlowFilter(0xFFAD33,1, 32,32,2) ,
@@ -643,7 +604,7 @@ class Game {//}
 			tf.text = name;
 			tf.x = Std.int( buffer.width*0.5-tf.textWidth*0.5 );
 			tf.y = -10;
-			TW.create(tf,"y",0).fl_pixel = true;
+			tw.createMs(tf,"y",0).fl_pixel = true;
 			tf.textColor = 0xF98715;
 			tf.filters = [
 				new flash.filters.DropShadowFilter(1,90, 0xFCE149,0.6, 0,0,1, 1,true),
@@ -651,16 +612,16 @@ class Game {//}
 				//new flash.filters.DropShadowFilter(1,90, 0x0,1, 2,2)
 			];
 			tf.alpha = 0;
-			TW.create(tf, "alpha", 1);
+			tw.createMs(tf, "alpha", 1);
 			haxe.Timer.delay(function() {
 				if( tf.parent==null )
 					return;
 				var o = {b:0.0};
 				try {
-					//TW.create(tf, "x", tf.x-5, TEaseOut, 500);
-					TW.create(tf, "y", tf.y-10, TEaseIn, 500);
-					TW.create(tf, "alpha", 0, TEaseIn, 800).onEnd = function() if(tf.parent!=null) tf.parent.removeChild(tf);
-					TW.create(o, "b", 1, TEaseIn, 300).onUpdateT = function(t) {
+					//tw.createMs(tf, "x", tf.x-5, TEaseOut, 500);
+					tw.createMs(tf, "y", tf.y-10, TEaseIn, 500);
+					tw.createMs(tf, "alpha", 0, TEaseIn, 800).onEnd = function() if(tf.parent!=null) tf.parent.removeChild(tf);
+					tw.createMs(o, "b", 1, TEaseIn, 300).onUpdateT = function(t) {
 						tf.filters = [ new flash.filters.BlurFilter(t*8,t*8) ];
 					}
 				} catch(e:Dynamic) {}
@@ -715,7 +676,7 @@ class Game {//}
 		tf.text = msg;
 		tf.x = WID-tf.textWidth*2-5;
 		tf.y = HEI;
-		TW.create(tf,"y", HEI-tf.textHeight*2-5);
+		tw.createMs(tf,"y", HEI-tf.textHeight*2-5);
 		tf.filters = [ new flash.filters.GlowFilter(0x0,1, 2,2,10) ];
 		lastTip = tf;
 	}
@@ -734,25 +695,25 @@ class Game {//}
 		tf.text = msg;
 		if( xdir<0 ) {
 			tf.x = 5;
-			TW.create(tf,"x", 20, 3000).fl_pixel = true;
+			tw.createMs(tf,"x", 20, 3000).fl_pixel = true;
 		}
 		else {
 			tf.x = WID-tf.textWidth*sc-5;
-			TW.create(tf,"x", WID-tf.textWidth*sc-20, 3000).fl_pixel = true;
+			tw.createMs(tf,"x", WID-tf.textWidth*sc-20, 3000).fl_pixel = true;
 		}
 		tf.y = y;
 		tf.filters = [ new flash.filters.GlowFilter(0xffffff,0.5, 8,8,1, 2) ];
 		tf.alpha = 0;
-		TW.create(tf,"alpha", 0.5, 2000);
+		tw.createMs(tf,"alpha", 0.5, 2000);
 		haxe.Timer.delay(function() {
-			TW.create(tf, "alpha",0, 1000).onEnd = function() tf.parent.removeChild(tf);
+			tw.createMs(tf, "alpha",0, 1000).onEnd = function() tf.parent.removeChild(tf);
 		}, 4000);
 	}
 
 	function clearTip() {
 		if( lastTip!=null ) {
 			var tf = lastTip;
-			TW.create(tf,"alpha",0).onEnd = function() tf.parent.removeChild(tf);
+			tw.createMs(tf,"alpha",0).onEnd = function() tf.parent.removeChild(tf);
 			lastTip = null;
 		}
 	}
@@ -768,7 +729,7 @@ class Game {//}
 		if( popMc!=null ) {
 			clearTip();
 			var mc = popMc;
-			TW.create(mc, "alpha", 0, 500).onEnd = function() mc.parent.removeChild(mc);
+			tw.createMs(mc, "alpha", 0, 500).onEnd = function() mc.parent.removeChild(mc);
 			popMc = null;
 		}
 		if( fl_nextDialog ) {
@@ -788,12 +749,12 @@ class Game {//}
 	function pop(msg:String) {
 		closePop();
 		fl_lockAll = true;
-		popMc = new Sprite();
+		popMc = new h2d.Object();
 		interf.addChild(popMc);
 
 		var clean = if(msg.charAt(0)=="*" || msg.charAt(0)=="§") msg.substr(1) else msg;
 
-		var bg = new Sprite();
+		var bg = new h2d.Object();
 		popMc.addChild(bg);
 
 		var tf = getTextField();
@@ -821,10 +782,10 @@ class Game {//}
 	function makeRadial(n:Int, x:Float,y:Float, r:Float, speed:Float) {
 		var list = new List();
 		for(i in 0...30) {
-			var a = Lib.randFloat(2*3.14);
+			var a = rnd(0,2*3.14);
 			var p = new Particle(x+Math.cos(a)*r, y-3+Math.sin(a)*r);
 			p.rotation = a*180/3.14;
-			var s = Lib.randFloat(speed) + speed*0.5;
+			var s = rnd(0,speed) + speed*0.5;
 			p.dx = Math.cos(a)*s;
 			p.dy = Math.sin(a)*s;
 			p.life = 3;
@@ -877,15 +838,15 @@ class Game {//}
 		player.sprite.playAnim("lookUp");
 		shardCounter.visible = false;
 
-		var white = new Sprite();
+		var white = new h2d.Object();
 		white.graphics.beginFill(0xffffff,1);
 		white.graphics.drawRect(0,0,buffer.width,buffer.height);
 		white.graphics.endFill();
 		buffer.addChild(white);
 		white.alpha = 0;
-		TW.create(white,"alpha", 1, TEaseIn, #if debug 5000 #else 5000 #end).onEnd = function() {
+		tw.createMs(white,"alpha", 1, TEaseIn, #if debug 5000 #else 5000 #end).onEnd = function() {
 			scene.visible = false;
-			TW.create(white,"alpha", 0, TEaseOut, #if debug 2000 #else 2000 #end).onEnd = function() white.parent.removeChild(white);
+			tw.createMs(white,"alpha", 0, TEaseOut, #if debug 2000 #else 2000 #end).onEnd = function() white.parent.removeChild(white);
 			for(p in Particle.ALL)
 				p.life = 0;
 			playEndCinematic();
@@ -901,17 +862,17 @@ class Game {//}
 		Assets.SBANK.hit(1);
 
 		for( p in Particle.makeExplosion(50, player.sprite.x, player.sprite.y, 2,10) ) {
-			p.drawBox(1,1, 0xAE0000, Lib.randFloat(0.5)+0.5);
+			p.drawBox(1,1, 0xAE0000, rnd(0,0.5)+0.5);
 			p.filters = [ new flash.filters.GlowFilter(0xAE0000,1, 2,2) ];
 			front.addChild(p);
 		}
-		TW.create(root, "y", root.y-6, TShakeBoth);
+		tw.createMs(root, "y", root.y-6, TShakeBoth);
 		player.sprite.alpha = 0;
 		shield = 0;
 		for(i in 0...35) {
-			var p = new Particle(player.sprite.x+Lib.randFloat(11)*Lib.sign(), player.sprite.y);
+			var p = new Particle(player.sprite.x+rnd(0,11)*Lib.sign(), player.sprite.y);
 			p.drawBox(1, Std.random(10)+1,0xFF1104);
-			p.dy = -Lib.randFloat(5)-0.1;
+			p.dy = -rnd(0,5)-0.1;
 			p.fl_wind = false;
 			p.gy = -0.1;
 			p.life = Std.random(15)+10;
@@ -921,7 +882,7 @@ class Game {//}
 		}
 
 		var o = {t:0.0};
-		var a = TW.create(o,"t", 1, 3000);
+		var a = tw.createMs(o,"t", 1, 3000);
 		a.onUpdateT = function(t) {
 			scene.filters = [
 				mt.deepnight.Color.getColorizeMatrixFilter(0x9D2828,t*0.8, 1-t),
@@ -940,15 +901,15 @@ class Game {//}
 		shield = 100;
 		setGhostVolume(0);
 		for( p in Particle.makeExplosion(50, player.sprite.x, player.sprite.y, 2,5) ) {
-			p.drawBox(1,1, 0xAE0000, Lib.randFloat(0.5)+0.5);
+			p.drawBox(1,1, 0xAE0000, rnd(0,0.5)+0.5);
 			p.filters = [ new flash.filters.GlowFilter(0xAE0000,1, 2,2) ];
 			front.addChild(p);
 		}
 		Assets.SBANK.die(1);
 		TW.terminate(player.sprite,"alpha");
 		root.y+=5;
-		TW.create(root, "y", root.y-5, TElasticEnd, 500);
-		TW.create(root, "x", root.x-5, TShakeBoth, 250);
+		tw.createMs(root, "y", root.y-5, TElasticEnd, 500);
+		tw.createMs(root, "x", root.x-5, TShakeBoth, 250);
 		player.sprite.alpha = 0;
 		//player.fl_grabbing = false;
 		player.fl_stable = false;
@@ -961,7 +922,7 @@ class Game {//}
 			if( fl_gameOver )
 				return;
 
-			TW.create(player.sprite, "alpha", 1, TEaseIn, 700);
+			tw.createMs(player.sprite, "alpha", 1, TEaseIn, 700);
 			player.moveTo(respawn.x, respawn.y);
 
 			for(p in makeRadial(30, player.sprite.x, player.sprite.y, 50, -4)) {
@@ -997,16 +958,16 @@ class Game {//}
 	function updateShardCounter() {
 		if( shardCounter!=null ) {
 			var mc = shardCounter;
-			TW.create(mc, "alpha", 0, TEaseOut, 1000).onEnd = function() mc.parent.removeChild(mc);
+			tw.createMs(mc, "alpha", 0, TEaseOut, 1000).onEnd = function() mc.parent.removeChild(mc);
 		}
-		shardCounter = new Sprite();
+		shardCounter = new h2d.Object();
 		interf.addChild(shardCounter);
 		shardCounter.visible = phase=="game";
 		shardCounter.x = 0;
 		shardCounter.y = buffer.height-13;
 		for(i in 0...maxShards) {
 			var on = i<shards.length;
-			var s = tiles.getSprite("shardCounter", on ? 0 : 1);
+			var s = tiles.h_get("shardCounter", on ? 0 : 1);
 			shardCounter.addChild(s);
 			s.x = i*8;
 			s.alpha = on?1:0.3;
@@ -1056,12 +1017,12 @@ class Game {//}
 
 		if( defaultParts )
 			for(i in 0...35) {
-				var p = new Particle(e.sprite.x+Lib.randFloat(6)*Lib.sign(), e.sprite.y-Lib.randFloat(5));
+				var p = new Particle(e.sprite.x+rnd(0,6)*Lib.sign(), e.sprite.y-rnd(0,5));
 				p.drawBox(1, Std.random(3)+1,0xFFAC00);
-				p.dy = -Lib.randFloat(1.5)-0.1;
+				p.dy = -rnd(0,1.5)-0.1;
 				p.fl_wind = false;
 				p.gy = -0.05;
-				p.alpha = Lib.randFloat(0.7)+0.3;
+				p.alpha = rnd(0,0.7)+0.3;
 				p.life = Std.random(15)+10;
 				//p.life = 20;
 				p.filters = [new flash.filters.GlowFilter(0xFFAC00,1, 4,4,2)];
@@ -1083,7 +1044,7 @@ class Game {//}
 			case "dropKey" :
 				if( !flags.get("_keyDropped") ) {
 					flags.set("_keyDropped",true);
-					TW.create(root, "y", root.y+5, TLoopEaseOut, 200);
+					tw.createMs(root, "y", root.y+5, TLoopEaseOut, 200);
 					redrawRoom();
 					Assets.SBANK.trigger(1);
 					setSpawn();
@@ -1102,19 +1063,19 @@ class Game {//}
 	function playEndCinematic() {
 		phase = "cinematic";
 
-		cine = new Sprite();
+		cine = new h2d.Object();
 		interf.addChild(cine);
 		cine.filters = getCineFilters();
 		cine.x = Std.int(buffer.width*0.5 - 10*16*0.5);
 		cine.y = 50;
 
-		var sky = tiles.getSprite("endSky");
+		var sky = tiles.h_get("endSky");
 		cine.addChild(sky);
 
 		var loops = new Array();
 
 		//for(i in 0...2) {
-			//var s = tiles.getSprite("endGround");
+			//var s = tiles.h_get("endGround");
 			//cine.addChild(s);
 			//s.x = i*10*16;
 			//s.y = 16*3-3;
@@ -1122,29 +1083,29 @@ class Game {//}
 			//loops.push({spr:s, spd:0.25});
 		//}
 
-		var ballCont = new Sprite();
+		var ballCont = new h2d.Object();
 		cine.addChild(ballCont);
 
-		var fxCont = new Sprite();
+		var fxCont = new h2d.Object();
 		cine.addChild(fxCont);
 
 		for(i in 0...2) {
-			var s = tiles.getSprite("endGround");
+			var s = tiles.h_get("endGround");
 			cine.addChild(s);
 			s.x = i*10*16;
 			s.y = 16*3;
 			loops.push({spr:s, spd:2.0});
 		}
 
-		var dog = tiles.getSprite("player");
-		dog.setCenter(0,0);
+		var dog = tiles.h_get("player");
+		dog.setCenterRatio(0,0);
 		dog.playAnim("walking");
 		dog.x = 16*3.5;
 		dog.y = 16*2+1;
 		cine.addChild(dog);
 
 
-		var mask = new flash.display.Sprite();
+		var mask = new flash.display.h2d.Object();
 		buffer.addChild(mask);
 		cineMask = mask;
 		mask.graphics.beginFill(0xff0000,0.3);
@@ -1156,29 +1117,29 @@ class Game {//}
 
 		var balls = new Array();
 		function addBall() {
-			var s = tiles.getSpriteRandom("endBall");
+			var s = tiles.h_getRandom("endBall");
 			ballCont.addChild(s);
-			var z = 0.5+Lib.randFloat(0.5);
-			//var ct = mt.deepnight.Color.getColorizeCT(0xC45B5B, Lib.randFloat(0.9));
+			var z = 0.5+rnd(0,0.5);
+			//var ct = mt.deepnight.Color.getColorizeCT(0xC45B5B, rnd(0,0.9));
 			//s.transform.colorTransform = ct;
-			//s.alpha = Lib.randFloat(0.7)+0.3;
+			//s.alpha = rnd(0,0.7)+0.3;
 			balls.push({
 				spr	: s,
 				x	: 16*10.0,
 				y	: -16.0-Std.random(16),
-				dx	: Lib.randFloat(2.5)+1,
+				dx	: rnd(0,2.5)+1,
 				dy	: 0.0,
 			});
 		}
 
-		var street = tiles.getSprite("endStreet");
+		var street = tiles.h_get("endStreet");
 		buffer.addChild(street);
 		street.filters = getCineFilters();
 		street.x = 160;
 		street.y = 15;
 		street.alpha = 0;
 
-		var photo = tiles.getSprite("endPhoto");
+		var photo = tiles.h_get("endPhoto");
 		buffer.addChild(photo);
 		photo.filters = getCineFilters();
 		photo.x = 180;
@@ -1196,17 +1157,17 @@ class Game {//}
 		cineUpdate = function() {
 			timer++;
 			if( timer==300 ) {
-				TW.create(street, "alpha", 1, 4000);
-				TW.create(street, "x", street.x-100, TLinear, 20000).fl_pixel = true;
+				tw.createMs(street, "alpha", 1, 4000);
+				tw.createMs(street, "x", street.x-100, TLinear, 20000).fl_pixel = true;
 				haxe.Timer.delay(function() {
-					TW.create(street, "alpha", 0, 4000);
+					tw.createMs(street, "alpha", 0, 4000);
 				}, 7000);
 			}
 			if( timer==650 ) {
-				TW.create(photo, "alpha", 1, 4000);
-				TW.create(photo, "x", photo.x-100, TLinear, 20000).fl_pixel = true;
+				tw.createMs(photo, "alpha", 1, 4000);
+				tw.createMs(photo, "x", photo.x-100, TLinear, 20000).fl_pixel = true;
 				haxe.Timer.delay(function() {
-					TW.create(photo, "alpha", 0, 4000);
+					tw.createMs(photo, "alpha", 0, 4000);
 				}, 7000);
 			}
 			if( timer==900 )
@@ -1240,17 +1201,17 @@ class Game {//}
 				p.groupId = "leaf";
 				p.life = 300;
 				p.r = Std.random(5)+2;
-				p.alpha = Lib.randFloat(0.8)+0.2;
+				p.alpha = rnd(0,0.8)+0.2;
 				p.bounds = new flash.geom.Rectangle(0,-16, 16*20, 16*4.5);
 				fxCont.addChild(p);
 			}
 
 			if( !TW.exists(dog,"x") )
-				TW.create(dog,"x", 16*2+Std.random(16*3), 4000).fl_pixel = true;
+				tw.createMs(dog,"x", 16*2+Std.random(16*3), 4000).fl_pixel = true;
 
 			if( Std.random(100)<3 && dogDy==0 && dog.y==baseY ) {
 				dog.playAnim("jumpUp");
-				dogDy = -2-Lib.randFloat(2);
+				dogDy = -2-rnd(0,2);
 			}
 			if( dogDy>=0 && dog.y<baseY )
 				dog.playAnim("jumpDown");
@@ -1264,13 +1225,13 @@ class Game {//}
 		}
 	}
 
-	function thinkOf(s:DSprite) {
-		s.setCenter(0.5,0.5);
+	function thinkOf(s:HSprite) {
+		s.setCenterRatio(0.5,0.5);
 		s.x = player.sprite.x-8;
 		s.y = player.sprite.y-12;
 		Assets.SBANK.think(0.2);
 		front.addChild(s);
-		var a = TW.create(s,"alpha", 0, TEaseIn, 4000);
+		var a = tw.createMs(s,"alpha", 0, TEaseIn, 4000);
 		a.onUpdate = function() {
 			s.x = player.sprite.x-8;
 			s.y = player.sprite.y-12;
@@ -1283,31 +1244,31 @@ class Game {//}
 		phase = "cinematic";
 		front.visible = false;
 		scene.visible = false;
-		cine = new Sprite();
+		cine = new h2d.Object();
 		interf.addChild(cine);
 		cine.x = Std.int( buffer.width*0.5-16*5*0.5 );
 		cine.y = 50;
 		cine.filters = getCineFilters();
 
-		var sky = tiles.getSprite("iSky");
+		var sky = tiles.h_get("iSky");
 		cine.addChild(sky);
 
-		var grass = tiles.getSprite("iGrass");
+		var grass = tiles.h_get("iGrass");
 		cine.addChild(grass);
 		grass.filters = [ new flash.filters.DropShadowFilter(1,-90, 0x0,0.5, 1,1,10)];
 		grass.y = 16*2-1;
 
-		var skyRoad = tiles.getSprite("iSky",1);
+		var skyRoad = tiles.h_get("iSky",1);
 		cine.addChild(skyRoad);
 		skyRoad.alpha = 0;
 
-		var car = tiles.getSprite("iCar");
+		var car = tiles.h_get("iCar");
 		cine.addChild(car);
 		car.x = 32;
 		car.y = 24;
 		car.alpha = 0;
 
-		var road = tiles.getSprite("iRoad");
+		var road = tiles.h_get("iRoad");
 		cine.addChild(road);
 		road.alpha = 0;
 		road.y = 16*2-1;
@@ -1317,13 +1278,13 @@ class Game {//}
 			[5,5,5,		5,5,5,		50,10,20, 3,3,3,3,		3,3,3,3]
 		);
 
-		var dog = tiles.getSprite("player");
+		var dog = tiles.h_get("player");
 		cine.addChild(dog);
 		dog.playAnim("cinematic",1);
 		dog.x = 16;
 		dog.y = 16;
 
-		var mask = new flash.display.Sprite();
+		var mask = new flash.display.h2d.Object();
 		buffer.addChild(mask);
 		cineMask = mask;
 		mask.graphics.beginFill(0xff0000,0.3);
@@ -1333,10 +1294,10 @@ class Game {//}
 		mask.y = cine.y;
 		cine.mask = mask;
 
-		var shadow = tiles.getSprite("iBall",1);
+		var shadow = tiles.h_get("iBall",1);
 		cine.addChild(shadow);
 
-		var ball = tiles.getSprite("iBall");
+		var ball = tiles.h_get("iBall");
 		cine.addChild(ball);
 		ball.x = -48;
 		ball.y = 16;
@@ -1377,7 +1338,7 @@ class Game {//}
 						p.frictY = 1;
 						p.life = 200;
 						p.r = Std.random(5)+2;
-						p.alpha = Lib.randFloat(0.5)+0.5;
+						p.alpha = rnd(0,0.5)+0.5;
 						p.fl_wind = false;
 						p.bounds = new flash.geom.Rectangle(0,-16, 16*5, 16*3);
 						p.filters = [ new flash.filters.GlowFilter(0x466F35,1,2,2,1) ];
@@ -1389,43 +1350,43 @@ class Game {//}
 					flags.remove("inGarden");
 					flags.set("onRoad",true);
 					var d = 500;
-					TW.create(road, "alpha", 1, d);
-					TW.create(skyRoad, "alpha", 1, d);
+					tw.createMs(road, "alpha", 1, d);
+					tw.createMs(skyRoad, "alpha", 1, d);
 					dog.x = 3;
 					dog.y = 16+5;
 					dog.playAnim("standing");
 					dog.alpha = 0;
-					TW.create(dog,"alpha",1, d);
+					tw.createMs(dog,"alpha",1, d);
 					ball.alpha = 0;
 					ball.x = 16*3;
 					ball.y = dog.y;
-					TW.create(ball,"alpha",1, d);
-					TW.create(ball, "x", 16*3.5, TEaseOut).onEnd = function() {
+					tw.createMs(ball,"alpha",1, d);
+					tw.createMs(ball, "x", 16*3.5, TEaseOut).onEnd = function() {
 						flags.set("carArrives",true);
 						var d = 2000;
-						TW.create(car,"alpha",1,TEaseIn, d);
-						TW.create(car,"x",40,TEaseIn, d).fl_pixel = true;
-						var a = TW.create(car,"y",16,TEaseIn, d);
+						tw.createMs(car,"alpha",1,TEaseIn, d);
+						tw.createMs(car,"x",40,TEaseIn, d).fl_pixel = true;
+						var a = tw.createMs(car,"y",16,TEaseIn, d);
 						a.fl_pixel = true;
 						a.onEnd = function() {
 							dog.playAnim("walking");
-							TW.create(car,"y",1,TLinear, 2000);
-							var a = TW.create(dog,"x", ball.x-12, TEase, 2000);
+							tw.createMs(car,"y",1,TLinear, 2000);
+							var a = tw.createMs(dog,"x", ball.x-12, TEase, 2000);
 							a.fl_pixel = true;
 							a.onEnd = function() {
 								dog.stopAnim(20);
 							}
 							haxe.Timer.delay(function() {
-								var white = new Sprite();
+								var white = new h2d.Object();
 								white.graphics.beginFill(0xffffff,1);
 								white.graphics.drawRect(0,0,buffer.width,buffer.height);
 								white.graphics.endFill();
 								buffer.addChild(white);
 								white.alpha = 0;
-								TW.create(white,"alpha", 1, TEaseIn, 1500).onEnd = function() {
+								tw.createMs(white,"alpha", 1, TEaseIn, 1500).onEnd = function() {
 									Assets.SBANK.explode(1);
 									cine.visible = false;
-									TW.create(white,"alpha", 0, TEaseOut, 500).onEnd = function() {
+									tw.createMs(white,"alpha", 0, TEaseOut, 500).onEnd = function() {
 										white.parent.removeChild(white);
 											haxe.Timer.delay(startGame, 1500);
 									}
@@ -1455,14 +1416,14 @@ class Game {//}
 					if( !player.sprite.hasAnim() ) {
 						player.sprite.playAnim("standing");
 						tip("basics", "Use LEFT + RIGHT arrows to move.");
-						thinkOf( tiles.getSprite("think",0) );
-						TW.create(darkness,"alpha", 0.5, TEaseIn, 2000).onEnd = function() {
+						thinkOf( tiles.h_get("think",0) );
+						tw.createMs(darkness,"alpha", 0.5, TEaseIn, 2000).onEnd = function() {
 							//dialog(["Beware little dog.", "Your shadow...", "You are not alone...", "Grab the soul shards before it reaches you...", "*Your shadow wants YOU.", "It comes...", "*Run for your life! RUN!"]);
 							//dialog(["Your soul, little dog..."]);
 							var key = room.entities[0];
 							var s = createLight(key.cx, key.cy, 0.5);
 							s.alpha = 0;
-							TW.create(s,"alpha",1);
+							tw.createMs(s,"alpha",1);
 							fl_ghost = false;
 							historyBase = history.copy();
 							//onDialogEnd = function() {
@@ -1489,7 +1450,7 @@ class Game {//}
 					p.frictY = 1;
 					p.life = 200;
 					p.r = Std.random(5)+2;
-					p.alpha = Lib.randFloat(0.5)+0.5;
+					p.alpha = rnd(0,0.5)+0.5;
 					p.fl_wind = false;
 					p.bounds = new flash.geom.Rectangle(16*2, -16, 16*7, 16*9);
 					p.filters = [ new flash.filters.GlowFilter(0x466F35,1,2,2,1) ];
@@ -1498,7 +1459,7 @@ class Game {//}
 
 
 			for( p in Particle.makeDust(1, Std.random(buffer.width), Std.random(buffer.height)) ) {
-				p.drawBox(1,1,0x298F85, Lib.randFloat(0.3)+0.1);
+				p.drawBox(1,1,0x298F85, rnd(0,0.3)+0.1);
 				p.life = 100;
 				p.bounds = buffer.getRect();
 				p.filters = [new flash.filters.GlowFilter(0x26596C,1, 2,2, 2) ];
@@ -1509,16 +1470,16 @@ class Game {//}
 				if( Key.isDown(Keyboard.UP) && player.jumpJIT>0 && !keyLocks.get("up") ) {
 					var n = if(player.fl_grabbing) Std.random(4)+3 else Std.random(4)+1;
 					for( i in 0...n ) {
-						var p = new Particle(player.sprite.x+Lib.randFloat(4)*Lib.sign(), player.sprite.y-Lib.randFloat(2)*Lib.sign());
-						p.drawBox(1,1, 0xC5CBDA, Lib.randFloat(0.7)+0.3);
+						var p = new Particle(player.sprite.x+rnd(0,4)*Lib.sign(), player.sprite.y-rnd(0,2)*Lib.sign());
+						p.drawBox(1,1, 0xC5CBDA, rnd(0,0.7)+0.3);
 						p.fl_wind = false;
 						if ( player.fl_grabbing ) {
-							p.dx = -Lib.randFloat(2.5)*player.sprite.scaleX;
-							p.dy = -Lib.randFloat(1)-0.2;
+							p.dx = -rnd(0,2.5)*player.sprite.scaleX;
+							p.dy = -rnd(0,1)-0.2;
 						}
 						else {
-							p.dx = Lib.randFloat(0.5)*player.sprite.scaleX;
-							p.dy = -Lib.randFloat(1);
+							p.dx = rnd(0,0.5)*player.sprite.scaleX;
+							p.dy = -rnd(0,1);
 							p.gy = 0;
 						}
 						p.life = Std.random(4);
@@ -1626,8 +1587,8 @@ class Game {//}
 
 			if( phase=="game" && breath--<0 ) {
 				breath = 40+Std.random(10);
-				var s = tiles.getSprite("smoke");
-				s.setCenter(0.5,1);
+				var s = tiles.h_get("smoke");
+				s.setCenterRatio(0.5,1);
 				s.playAnim("smoke",1);
 				s.alpha = 0.2;
 				s.scaleX = player.sprite.scaleX;
@@ -1645,7 +1606,7 @@ class Game {//}
 			if( inRoom(1,0) && player.cy>=6 )
 				credit("author", "A game by deepnight", 1, HEI-150);
 			if( inRoom(1,0) && player.cx>=2 && !flags.get("_thinkOfHuman") ) {
-				thinkOf( tiles.getSprite("think",1) );
+				thinkOf( tiles.h_get("think",1) );
 				flags.set("_thinkOfHuman",true);
 				fl_lock = true;
 				player.sprite.playAnim("lookBack",1);
@@ -1691,14 +1652,14 @@ class Game {//}
 							else {
 								ghost.x = h.x;
 								ghost.y = h.y;
-								ghost.setCenter(h.cx, h.cy);
+								ghost.setCenterRatio(h.cx, h.cy);
 								ghost.setFrame(h.frame);
 								ghost.scaleX = h.scaleX;
 								ghost.visible = h.room==room.getId();
 								ghost.alpha = h.alpha;
 								if( h.death && ghost.visible && !inRoom(0,0)) {
 									for( p in Particle.makeExplosion(20, ghost.x, ghost.y, 2,5) ) {
-										p.drawBox(1,1, 0x6F497C, Lib.randFloat(0.5)+0.5);
+										p.drawBox(1,1, 0x6F497C, rnd(0,0.5)+0.5);
 										p.filters = [ new flash.filters.GlowFilter(0x753966,1, 2,2) ];
 										front.addChild(p);
 									}
