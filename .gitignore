@@ -2,5 +2,7 @@
 art/export
 psd/export
 *.zip
+
 redist
 bin
+_original
