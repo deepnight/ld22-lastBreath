@@ -66,38 +66,21 @@ class Assets {
 		tiles.defineAnim("wakeUp", "6, 4(60), 5(20), 4, 5(3), 4, 5(6),  6(7), 2(20), 3(50), 2(30), 7(100), 2(2), 6(10), 8(999)");
 
 		tiles.sliceAnimGrid("smoke",0,  1,  0,10,  6);
+		tiles.slice("think",0,  6*16,9*16, 32,32,  2);
+		tiles.sliceGrid("shardCounter",0,  10,9, 2);
 
-		/***
-		tiles.slice("player",0, 0,16*5, 16,16, 20,5);
+		tiles.sliceGrid("leo",0,  0,9);
 
-		tiles.setGroup("smoke");
-		tiles.slice(0,16*10, 16,16, 6);
-		tiles.setAnim("smoke", [0,1,2,3,4,5], [1]);
-		tiles.setGroup("think");
-		tiles.slice(16*6,16*9, 32,32, 2);
-		tiles.setGroup("shardCounter");
-		tiles.slice(16*10,16*9, 16,16, 2);
+		tiles.sliceGrid("shard",0,  1,9, 5);
+		tiles.sliceGrid("shardAnim",0,  1,9, 5);
+		tiles.defineAnim("shardAnim", "1(3), 2(2), 3(1),  4(1),  3(1), 2(2), 1(3), 0(4)");
 
-		tiles.setGroup("leo");
-		tiles.slice(0,16*9, 16,16, 1);
-		tiles.setGroup("shard");
-		tiles.slice(16*1,16*9, 16,16, 5);
-		tiles.setAnim("shardAnim", [1,2,3,4, 3,2,1,0], [2,2,1,3, 2,1,2,3]);
-
-		tiles.setGroup("endSky");
-		tiles.slice(336,0, 16*10, 16*4);
-		tiles.setGroup("endGround");
-		tiles.slice(336,64, 16*10, 16*1);
-		tiles.setGroup("endStreet");
-		tiles.slice(352,80, 16*5, 16*3);
-		tiles.setGroup("endPhoto");
-		tiles.slice(432,80, 16*3, 16*3);
-		tiles.setGroup("endBall");
-		tiles.slice(192,464, 16*3, 16*3, 3);
-
-		tiles.setGroup("worldMap");
-		tiles.slice(0,336, 16*10, 16*2);
-		/***/
+		tiles.slice("endSky",0,  336,0, 16*10, 16*4);
+		tiles.slice("endGround",0,  336,64, 16*10, 16*1);
+		tiles.slice("endStreet",0,  352,80, 16*5, 16*3);
+		tiles.slice("endPhoto",0,  432,80, 16*3, 16*3);
+		tiles.slice("endBall",0,  192,464, 16*3, 16*3,  3);
+		tiles.slice("worldMap",0,  0,336, 16*10, 16*2);
 	}
 
 	public static inline function one(arr:Array<?Float->dn.heaps.Sfx>, ?vol=1.0) : dn.heaps.Sfx {
