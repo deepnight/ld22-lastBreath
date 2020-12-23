@@ -6,6 +6,7 @@ import flash.display.Sprite;
 import flash.media.Sound;
 import flash.ui.Keyboard;
 import flash.display.BitmapData;
+
 import mt.deepnight.Buffer;
 import mt.deepnight.Lib;
 import mt.deepnight.SpriteLib;
@@ -27,7 +28,7 @@ typedef GhostData = {
 	death	: Bool,
 }
 
-class Cell implements haxe.Public {
+@:publicFields class Cell {
 	var kill		: Bool;
 	var collide		: Bool;
 	var cx			: Int;
@@ -42,7 +43,7 @@ class Cell implements haxe.Public {
 	}
 }
 
-class Room implements haxe.Public {
+@:publicFields class Room {
 	var map		: Array<Array<Cell>>;
 	var gx		: Int;
 	var gy		: Int;

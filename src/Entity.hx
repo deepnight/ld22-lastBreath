@@ -2,7 +2,7 @@ import mt.deepnight.SpriteLib;
 import mt.deepnight.Lib;
 import Game;
 
-class Entity implements haxe.Public {
+@:publicFields class Entity {
 	var man			: Game;
 	var fl_stable	: Bool;
 	var fl_grabbing	: Bool;
