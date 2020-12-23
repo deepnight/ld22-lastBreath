@@ -1,5 +1,8 @@
 ﻿// Wolfram : http://tones.wolfram.com/xid/0442-996-1532-982-3127
 
+import dn.Tweenie;
+import dn.heaps.HParticle;
+
 typedef GhostData = {
 	x		: Float,
 	y		: Float,
@@ -105,6 +108,8 @@ class Game extends dn.Process {
 	var keyLocks		: Map<String,Bool>;
 	var easy			: Bool;
 
+	var pool : dn.heaps.HParticle.ParticlePool;
+
 	public var player	: Entity;
 	var playerLight		: HSprite;
 	var ghost			: HSprite;
@@ -123,8 +128,8 @@ class Game extends dn.Process {
 	var popMc			: Null<h2d.Object>;
 	var curDialog		: Array<String>;
 	var onDialogEnd		: Null<Void->Void>;
-	var lastTitle		: Null<flash.text.TextField>;
-	var lastTip			: Null<flash.text.TextField>;
+	var lastTitle		: Null<h2d.Text>;
+	var lastTip			: Null<h2d.Text>;
 
 	var cineMask		: h2d.Object;
 	var cine			: h2d.Object;
@@ -142,9 +147,6 @@ class Game extends dn.Process {
 	var lastKey			: UInt;
 	var history			: Array<GhostData>;
 	var historyBase		: Array<GhostData>;
-	#if debug
-	var debug			: mt.kiroukou.debug.Stats;
-	#end
 
 
 	public function new() {
@@ -175,9 +177,9 @@ class Game extends dn.Process {
 		// root.addChild(gradient);
 		// var g = gradient.graphics;
 		// var m = new flash.geom.Matrix();
-		// m.createGradientBox(buffer.width, buffer.height, Math.PI/2, 0,50);
+		// m.createGradientBox(GAME_WID, GAME_HEI, Math.PI/2, 0,50);
 		// g.beginGradientFill(flash.display.GradientType.LINEAR, [0x3A4056,0x0A0B0E], [0,1], [0,255], m);
-		// g.drawRect(0,0,buffer.width, buffer.height);
+		// g.drawRect(0,0,GAME_WID, GAME_HEI);
 		// g.endFill();
 
 		scene = new h2d.Object(root);
@@ -236,10 +238,7 @@ class Game extends dn.Process {
 		ghost.visible = false;
 		front.addChild(ghost);
 
-		#if debug
-		debug = new mt.kiroukou.debug.Stats(WID-60,0);
-		root.addChild(debug);
-		#end
+		pool = new ParticlePool(Assets.tiles.tile, 512, 30);
 
 		displayRoom(0,0,false);
 		player.moveTo(0,0);
@@ -428,10 +427,8 @@ class Game extends dn.Process {
 		if( roomSprites!=null ) {
 			miscSprites.parent.removeChild(miscSprites);
 			roomSprites.parent.removeChild(roomSprites);
-			while( bg.numChildren>0 )
-				bg.removeChildAt(0);
-			while( lights.numChildren>0 )
-				lights.removeChildAt(0);
+			bg.removeChildren();
+			lights.removeChildren();
 		}
 
 		if( room!=null ) {
@@ -446,19 +443,16 @@ class Game extends dn.Process {
 					}
 			}
 		}
-		//bg = new h2d.Object();
-		//scene.addChild(bg);
 		miscSprites = new h2d.Object();
 		front.addChild(miscSprites);
 		roomSprites = new h2d.Object();
-		roomSprites.filters = [
-			//new flash.filters.DropShadowFilter(1,-90, 0x8CA4CE,0.2, 0,0,1, 1,true),
-			new flash.filters.DropShadowFilter(1,-90, 0x0,0.6, 2,2,10, 1,true),
-			new flash.filters.GlowFilter(0x0,0.6, 2,2,5),
-		];
+		// roomSprites.filters = [ // TODO
+		// 	new flash.filters.DropShadowFilter(1,-90, 0x0,0.6, 2,2,10, 1,true),
+		// 	new flash.filters.GlowFilter(0x0,0.6, 2,2,5),
+		// ];
 		platforms.addChild(roomSprites);
 		lights.addChild(playerLight);
-		rseed = new mt.Rand(0);
+		rseed = new dn.Rand(0);
 		rseed.initSeed(rx+ry*101 + 2);
 
 		if( rx==0 && ry==0 )
@@ -492,13 +486,11 @@ class Game extends dn.Process {
 					case 0x0042ff : // shard
 						if( !hasShard(room.getId(),x,y) ) {
 							var i = createItem("shard",x,y, tiles.h_get("shard"));
-							i.sprite.playAnim("shardAnim");
-							for(n in 0...Std.random(6))
-								i.sprite.nextAnimFrame();
-							i.sprite.filters = [
-								new flash.filters.GlowFilter(0xBCFAF3,1, 4,4),
-								new flash.filters.GlowFilter(0x1FE9BB,1, 16,16,1)
-							];
+							i.sprite.anim.play("shardAnim"); // TODO async anims
+							// i.sprite.filters = [ // TODO
+							// 	new flash.filters.GlowFilter(0xBCFAF3,1, 4,4),
+							// 	new flash.filters.GlowFilter(0x1FE9BB,1, 16,16,1)
+							// ];
 							var s = tiles.h_get("lightRadius");
 							s.setCenterRatio(0.5,0.5);
 							s.x = sx+6;
@@ -546,9 +538,9 @@ class Game extends dn.Process {
 							s.setCenterRatio(0.5, 1);
 							s.x = sx+8;
 							s.y = sy+12;
-							s.blendMode = flash.display.BlendMode.SCREEN;
+							s.blendMode = Screen;
 							s.scaleX = if( player.cx<x ) -1 else 1;
-							s.filters = [ new flash.filters.GlowFilter(0x1FE9BB,1, 16,16,1) ];
+							// s.filters = [ new flash.filters.GlowFilter(0x1FE9BB,1, 16,16,1) ]; // TODO
 							miscSprites.addChild(s);
 							if( phase!="intro" ) {
 								var s = tiles.h_get("lightRadius");
@@ -582,11 +574,11 @@ class Game extends dn.Process {
 
 		if( inRoom(0,0) ) {
 			var s = tiles.h_get("lightSource");
-			s.filters = [
-				new flash.filters.GlowFilter(0xFFF39D,1, 16,16,2) ,
-				new flash.filters.GlowFilter(0xFFAD33,1, 32,32,2) ,
-				new flash.filters.GlowFilter(0xFF9900,1, 64,64,1) ,
-			];
+			// s.filters = [ // TODO
+			// 	new flash.filters.GlowFilter(0xFFF39D,1, 16,16,2) ,
+			// 	new flash.filters.GlowFilter(0xFFAD33,1, 32,32,2) ,
+			// 	new flash.filters.GlowFilter(0xFF9900,1, 64,64,1) ,
+			// ];
 			s.x = 5*16;
 			s.y = -20;
 			miscSprites.addChild(s);
@@ -602,31 +594,29 @@ class Game extends dn.Process {
 				lastTitle.parent.removeChild(lastTitle);
 			var tf = getTextField();
 			tf.text = name;
-			tf.x = Std.int( buffer.width*0.5-tf.textWidth*0.5 );
+			tf.x = Std.int( GAME_WID*0.5-tf.textWidth*0.5 );
 			tf.y = -10;
-			tw.createMs(tf,"y",0).fl_pixel = true;
+			tw.createMs(tf.y,0).pixel();
 			tf.textColor = 0xF98715;
-			tf.filters = [
-				new flash.filters.DropShadowFilter(1,90, 0xFCE149,0.6, 0,0,1, 1,true),
-				new flash.filters.GlowFilter(0x0,0.5, 2,2,10),
-				//new flash.filters.DropShadowFilter(1,90, 0x0,1, 2,2)
-			];
+			// tf.filters = [ // TODO
+			// 	new flash.filters.DropShadowFilter(1,90, 0xFCE149,0.6, 0,0,1, 1,true),
+			// 	new flash.filters.GlowFilter(0x0,0.5, 2,2,10),
+			// ];
 			tf.alpha = 0;
-			tw.createMs(tf, "alpha", 1);
+			tw.createMs(tf.alpha, 1);
 			haxe.Timer.delay(function() {
 				if( tf.parent==null )
 					return;
 				var o = {b:0.0};
 				try {
-					//tw.createMs(tf, "x", tf.x-5, TEaseOut, 500);
-					tw.createMs(tf, "y", tf.y-10, TEaseIn, 500);
-					tw.createMs(tf, "alpha", 0, TEaseIn, 800).onEnd = function() if(tf.parent!=null) tf.parent.removeChild(tf);
-					tw.createMs(o, "b", 1, TEaseIn, 300).onUpdateT = function(t) {
-						tf.filters = [ new flash.filters.BlurFilter(t*8,t*8) ];
+					tw.createMs(tf.y, tf.y-10, TEaseIn, 500);
+					tw.createMs(tf.alpha, 0, TEaseIn, 800).onEnd = function() if(tf.parent!=null) tf.parent.removeChild(tf);
+					tw.createMs(o.b, 1, TEaseIn, 300).onUpdateT = function(t) {
+						// tf.filters = [ new flash.filters.BlurFilter(t*8,t*8) ]; // TODO
 					}
 				} catch(e:Dynamic) {}
 			}, 2000);
-			buffer.addChild(tf);
+			root.addChild(tf);
 			lastTitle = tf;
 		}
 	}
@@ -650,16 +640,7 @@ class Game extends dn.Process {
 	}
 
 	function getTextField() {
-		var tf = new flash.text.TextField();
-		var f = new flash.text.TextFormat();
-		f.font = FONT.fontName;
-		f.size = 8;
-		tf.defaultTextFormat = f;
-		tf.wordWrap = true;
-		tf.multiline = true;
-		tf.selectable = false;
-		tf.mouseEnabled = false;
-		tf.embedFonts = true;
+		var tf = new h2d.Text( Assets.font );
 		return tf;
 	}
 
@@ -670,14 +651,13 @@ class Game extends dn.Process {
 		clearTip();
 		var tf = getTextField();
 		root.addChild(tf);
-		tf.width = WID;
 		tf.textColor = 0xffffff;
 		tf.scaleX = tf.scaleY = 2;
 		tf.text = msg;
-		tf.x = WID-tf.textWidth*2-5;
-		tf.y = HEI;
-		tw.createMs(tf,"y", HEI-tf.textHeight*2-5);
-		tf.filters = [ new flash.filters.GlowFilter(0x0,1, 2,2,10) ];
+		tf.x = w()-tf.textWidth*2-5;
+		tf.y = h();
+		tw.createMs(tf.y, h()-tf.textHeight*2-5);
+		// tf.filters = [ new flash.filters.GlowFilter(0x0,1, 2,2,10) ]; // TODO
 		lastTip = tf;
 	}
 
@@ -688,32 +668,31 @@ class Game extends dn.Process {
 		flags.set("_"+k,true);
 		var tf = getTextField();
 		root.addChild(tf);
-		tf.width = WID;
 		tf.textColor = 0xffffff;
 		var sc = 4;
 		tf.scaleX = tf.scaleY = sc;
 		tf.text = msg;
 		if( xdir<0 ) {
 			tf.x = 5;
-			tw.createMs(tf,"x", 20, 3000).fl_pixel = true;
+			tw.createMs(tf.x, 20, 3000).pixel();
 		}
 		else {
-			tf.x = WID-tf.textWidth*sc-5;
-			tw.createMs(tf,"x", WID-tf.textWidth*sc-20, 3000).fl_pixel = true;
+			tf.x = w()-tf.textWidth*sc-5;
+			tw.createMs(tf.x, w()-tf.textWidth*sc-20, 3000).pixel();
 		}
 		tf.y = y;
-		tf.filters = [ new flash.filters.GlowFilter(0xffffff,0.5, 8,8,1, 2) ];
+		// tf.filters = [ new flash.filters.GlowFilter(0xffffff,0.5, 8,8,1, 2) ]; // TODO
 		tf.alpha = 0;
-		tw.createMs(tf,"alpha", 0.5, 2000);
+		tw.createMs(tf.alpha, 0.5, 2000);
 		haxe.Timer.delay(function() {
-			tw.createMs(tf, "alpha",0, 1000).onEnd = function() tf.parent.removeChild(tf);
+			tw.createMs(tf.alpha, 0, 1000).onEnd = function() tf.remove();
 		}, 4000);
 	}
 
 	function clearTip() {
 		if( lastTip!=null ) {
 			var tf = lastTip;
-			tw.createMs(tf,"alpha",0).onEnd = function() tf.parent.removeChild(tf);
+			tw.createMs(tf.alpha,0).onEnd = function() tf.remove();
 			lastTip = null;
 		}
 	}
@@ -729,7 +708,7 @@ class Game extends dn.Process {
 		if( popMc!=null ) {
 			clearTip();
 			var mc = popMc;
-			tw.createMs(mc, "alpha", 0, 500).onEnd = function() mc.parent.removeChild(mc);
+			tw.createMs(mc.alpha, 0, 500).onEnd = function() mc.remove();
 			popMc = null;
 		}
 		if( fl_nextDialog ) {
@@ -760,22 +739,20 @@ class Game extends dn.Process {
 		var tf = getTextField();
 		popMc.addChild(tf);
 		tf.textColor = 0xffffff;
-		tf.width = 150;
-		tf.height = 300;
+		tf.maxWidth = 150;
 
 		tf.text = if( msg.charAt(0)!="§" )  "\""+clean+"\"" else clean;
-		tf.width = tf.textWidth + 5;
-		tf.height = tf.textHeight + 5;
+		tf.maxWidth = tf.textWidth + 5;
 
-		var g = bg.graphics;
-		g.beginFill( if(msg.charAt(0)=="*") 0x891414 else 0x474D78, 1);
-		g.drawRect(0,0, tf.width,tf.height);
-		bg.filters = [
-			new flash.filters.GlowFilter(0xFFFFFF,1,2,2,10),
-			new flash.filters.DropShadowFilter(3,90, 0x0,1, 4,4),
-		];
+		// var g = bg.graphics; // TODO popup bg
+		// g.beginFill( if(msg.charAt(0)=="*") 0x891414 else 0x474D78, 1);
+		// g.drawRect(0,0, tf.width,tf.height);
+		// bg.filters = [
+		// 	new flash.filters.GlowFilter(0xFFFFFF,1,2,2,10),
+		// 	new flash.filters.DropShadowFilter(3,90, 0x0,1, 4,4),
+		// ];
 
-		popMc.x = Std.int(buffer.width*0.5-popMc.width*0.5) + Std.random(20)*Lib.sign();
+		// popMc.x = Std.int(GAME_WID*0.5-popMc.width*0.5) + Std.random(20)*Lib.sign(); // TODO position
 		popMc.y = 15 + Std.random(20);
 	}
 
@@ -835,20 +812,18 @@ class Game extends dn.Process {
 		fl_ghost = false;
 		player.dx = 0;
 		player.dy = 0;
-		player.sprite.playAnim("lookUp");
+		player.sprite.anim.play("lookUp");
 		shardCounter.visible = false;
 
-		var white = new h2d.Object();
-		white.graphics.beginFill(0xffffff,1);
-		white.graphics.drawRect(0,0,buffer.width,buffer.height);
-		white.graphics.endFill();
-		buffer.addChild(white);
+		var white = new h2d.Graphics(root);
+		white.beginFill(0xffffff,1);
+		white.drawRect(0,0,GAME_WID,GAME_HEI);
+		white.endFill();
 		white.alpha = 0;
-		tw.createMs(white,"alpha", 1, TEaseIn, #if debug 5000 #else 5000 #end).onEnd = function() {
+		tw.createMs(white.alpha, 1, TEaseIn, #if debug 5000 #else 5000 #end).onEnd = function() {
 			scene.visible = false;
-			tw.createMs(white,"alpha", 0, TEaseOut, #if debug 2000 #else 2000 #end).onEnd = function() white.parent.removeChild(white);
-			for(p in Particle.ALL)
-				p.life = 0;
+			tw.createMs(white.alpha, 0, TEaseOut, #if debug 2000 #else 2000 #end).onEnd = function() white.parent.removeChild(white);
+			pool.killAll();
 			playEndCinematic();
 		}
 	}
@@ -884,13 +859,13 @@ class Game extends dn.Process {
 		var o = {t:0.0};
 		var a = tw.createMs(o,"t", 1, 3000);
 		a.onUpdateT = function(t) {
-			scene.filters = [
-				mt.deepnight.Color.getColorizeMatrixFilter(0x9D2828,t*0.8, 1-t),
-				new flash.filters.BlurFilter(t*2,t*2),
-			];
+			// scene.filters = [ // TODO
+			// 	mt.deepnight.Color.getColorizeMatrixFilter(0x9D2828,t*0.8, 1-t),
+			// 	new flash.filters.BlurFilter(t*2,t*2),
+			// ];
 		}
 		a.onEnd = function() {
-			scene.filters = [];
+			scene.filter = null;
 			resetGame();
 		}
 	}
@@ -906,10 +881,10 @@ class Game extends dn.Process {
 			front.addChild(p);
 		}
 		Assets.SBANK.die(1);
-		TW.terminate(player.sprite,"alpha");
+		tw.terminateWithoutCallbacks(player.sprite.alpha);
 		root.y+=5;
-		tw.createMs(root, "y", root.y-5, TElasticEnd, 500);
-		tw.createMs(root, "x", root.x-5, TShakeBoth, 250);
+		tw.createMs(root.y, root.y-5, TElasticEnd, 500);
+		tw.createMs(root.x, root.x-5, TShakeBoth, 250);
 		player.sprite.alpha = 0;
 		//player.fl_grabbing = false;
 		player.fl_stable = false;
@@ -964,7 +939,7 @@ class Game extends dn.Process {
 		interf.addChild(shardCounter);
 		shardCounter.visible = phase=="game";
 		shardCounter.x = 0;
-		shardCounter.y = buffer.height-13;
+		shardCounter.y = GAME_HEI-13;
 		for(i in 0...maxShards) {
 			var on = i<shards.length;
 			var s = tiles.h_get("shardCounter", on ? 0 : 1);
@@ -1066,7 +1041,7 @@ class Game extends dn.Process {
 		cine = new h2d.Object();
 		interf.addChild(cine);
 		cine.filters = getCineFilters();
-		cine.x = Std.int(buffer.width*0.5 - 10*16*0.5);
+		cine.x = Std.int(GAME_WID*0.5 - 10*16*0.5);
 		cine.y = 50;
 
 		var sky = tiles.h_get("endSky");
@@ -1171,9 +1146,9 @@ class Game extends dn.Process {
 				}, 7000);
 			}
 			if( timer==900 )
-				credit("endTitle", "\""+TITLE+"\"", 1, HEI-200);
+				credit("endTitle", "\""+TITLE+"\"", 1, h()-200);
 			if( timer==1050 )
-				credit("thank", "Thank you for playing =)", 1, HEI-170);
+				credit("thank", "Thank you for playing =)", 1, h()-170);
 			if( timer==1100 )
 				tip("url","http://blog.deepnight.net");
 			for(l in loops) {
@@ -1246,7 +1221,7 @@ class Game extends dn.Process {
 		scene.visible = false;
 		cine = new h2d.Object();
 		interf.addChild(cine);
-		cine.x = Std.int( buffer.width*0.5-16*5*0.5 );
+		cine.x = Std.int( GAME_WID*0.5-16*5*0.5 );
 		cine.y = 50;
 		cine.filters = getCineFilters();
 
@@ -1379,7 +1354,7 @@ class Game extends dn.Process {
 							haxe.Timer.delay(function() {
 								var white = new h2d.Object();
 								white.graphics.beginFill(0xffffff,1);
-								white.graphics.drawRect(0,0,buffer.width,buffer.height);
+								white.graphics.drawRect(0,0,GAME_WID,GAME_HEI);
 								white.graphics.endFill();
 								buffer.addChild(white);
 								white.alpha = 0;
@@ -1458,7 +1433,7 @@ class Game extends dn.Process {
 				}
 
 
-			for( p in Particle.makeDust(1, Std.random(buffer.width), Std.random(buffer.height)) ) {
+			for( p in Particle.makeDust(1, Std.random(GAME_WID), Std.random(GAME_HEI)) ) {
 				p.drawBox(1,1,0x298F85, rnd(0,0.3)+0.1);
 				p.life = 100;
 				p.bounds = buffer.getRect();
@@ -1604,7 +1579,7 @@ class Game extends dn.Process {
 			}
 
 			if( inRoom(1,0) && player.cy>=6 )
-				credit("author", "A game by deepnight", 1, HEI-150);
+				credit("author", "A game by deepnight", 1, h()-150);
 			if( inRoom(1,0) && player.cx>=2 && !flags.get("_thinkOfHuman") ) {
 				thinkOf( tiles.h_get("think",1) );
 				flags.set("_thinkOfHuman",true);
@@ -1670,12 +1645,12 @@ class Game extends dn.Process {
 					}
 
 					var v = if( ghost.visible )
-						Math.min(1, Math.max(0, 1-Lib.distance(player.sprite.x,player.sprite.y, ghost.x,ghost.y)/100));
+						Math.min(1, Math.max(0, 1-M.dist(player.sprite.x,player.sprite.y, ghost.x,ghost.y)/100));
 					else
 						0;
 					setGhostVolume(v);
 
-					if( ghost.visible && Lib.distance(ghost.x,ghost.y, player.sprite.x, player.sprite.y)<=6 )
+					if( ghost.visible && M.dist(ghost.x,ghost.y, player.sprite.x, player.sprite.y)<=6 )
 						gameOver();
 				}
 			}
@@ -1683,8 +1658,7 @@ class Game extends dn.Process {
 			#if debug
 			debug.custom.text = "d="+ghostDist+"/h="+history.length;
 			#end
-
 		}
-		buffer.update();
+		pool.update(tmod);
 	}
 }
