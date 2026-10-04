@@ -1,0 +1,29 @@
+{
+	"skipTerminateQuickPick": true,
+	"skipSwitchToOutput": false,
+	"skipErrorMessage": true,
+	"commands": [
+		{
+			"text": "Redist",
+			"color": "lightgreen",
+			"command": "haxelib run redistHelper hl.hxml js.hxml -p LastBreath",
+			"alignment": "right",
+			"skipTerminateQuickPick": false
+		},
+		{
+			"text": "⛴ JS",
+			"color": "yellow",
+			"commandType":"exec",
+			"command": "haxe js.hxml",
+			"alignment": "right",
+			"skipTerminateQuickPick": false
+		},
+		{
+			"text": "Run JS",
+			"color": "yellow",
+			"command": "start js.html",
+			"alignment": "right",
+			"skipTerminateQuickPick": false
+		}
+	]
+}

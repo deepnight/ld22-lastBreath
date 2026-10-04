@@ -1,0 +1,8 @@
+-cp src
+-main Boot
+-lib heaps
+-lib deepnightLibs
+-D useProcessTweenie
+-D resourcesPath=res
+-D windowSize=1024x768
+-dce full
