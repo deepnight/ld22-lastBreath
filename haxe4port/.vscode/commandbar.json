@@ -6,7 +6,7 @@
 		{
 			"text": "Redist",
 			"color": "lightgreen",
-			"command": "haxelib run redistHelper hl.hxml js.hxml -p LastBreath",
+			"command": "haxelib run redistHelper js.hxml -p LastBreath",
 			"alignment": "right",
 			"skipTerminateQuickPick": false
 		},
