@@ -275,7 +275,7 @@ class Game extends dn.Process {
 			front.visible = false;
 			scene.visible = false;
 			phase = "difficulty";
-			dialog(["§Choose difficulty :\n1- Easy\n2- Normal"]);
+			dialog(["§Choose difficulty :\n1- Normal\n2- Hard"]);
 			onDialogEnd = function() {
 				fn();
 			}
