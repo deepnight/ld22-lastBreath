@@ -28,11 +28,7 @@ Unfortunately, with my family and my work, I wasn't able to find any time to do 
 
 A friend of mine recommended me to try making those ports work using AI, which I did.
 
-It was definitely not an easy task though, but this tool allowed me to rush the conversion of my old games and make them playable in a few hours of work.
-
 ### Friendly reminder ❤︎
 
-**I don't use any AI gen to create any personal or work content, so please don't burn alive me in the public square.**
-
-**This only made me happy to see some old projects coming back to life after, sometimes, 10yrs+ of disappearance.**
+**I don't use any AI gen to create any personal or work content.** This only made me happy to see some old projects coming back to life after, sometimes, 10yrs+ of disappearance.
 
